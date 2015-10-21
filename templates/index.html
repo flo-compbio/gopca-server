@@ -1,0 +1,32 @@
+{# This is the template for the main page.
+
+Arguments
+---------
+	runs: list of GSRun objects, containing the currently available runs
+
+#}
+
+{% extends "base.html" %}
+{% block content %}
+<h2>GO-PCA Server</h2>
+<p class="test">Session ID:</p><pre>{{session_id}}</pre>
+{% if new != "1" %}
+{# we're not starting a new session - include a link to do so #}
+<p><a href="?new=1">New Session</a></p>
+{% endif %}
+<h3>Runs</h3>
+<table>
+	<tr><th>ID</th><th>Description</th><th>Species</th></tr>
+	{% for r in runs %}
+	<tr><td><a href="/runs/{{r.id}}">{{r.id}}</a></td><td></td><td></td></tr>
+	{#		<td>{{ds.description}}</td><td>{{ds.species}}</td></tr> #}
+	{% endfor %}
+
+</table>
+
+<form action="submit" method="post">
+<input type="hidden" name="session_id" value="{{session_id}}"/>
+<input type="submit"/>
+</form>
+
+{% endblock %}
