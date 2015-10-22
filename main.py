@@ -17,10 +17,10 @@ from tornado import gen
 
 from tornado.httpclient import AsyncHTTPClient
 
-from items import GSRun,GSAnnotation
+from items import GSRun,GSGeneAnnotation,GSGOAnnotation
 from handlers import *
 from update_handlers import *
-from common import *
+import common
 
 @tornado.web.asynchronous
 def future_func(callback):
@@ -55,13 +55,15 @@ class GOPCAServer(object):
 		self.template_loader = FileSystemLoader(searchpath = self.template_dir)
 		self.template_env = Environment(loader = self.template_loader )
 
-		self.runs = common.find_runs()
-		self.gene_annotations = common.find_gene_annotations()
-		self.go_annotations = common.find_go_annotations()
+		self.runs = common.find_runs(self.run_dir)
+		self.gene_annotations = common.find_gene_annotations(self.data_dir)
+		self.go_annotations = common.find_go_annotations(self.data_dir)
 		print 'gene annotations:',self.gene_annotations
 		print 'GO annotations:',self.go_annotations
 		print 'Runs:',self.runs
-		data = {'runs': self.runs, 'annotations': self.gene_annotations,\
+		data = {'runs': self.runs,
+				'gene_annotations': self.gene_annotations,\
+				'go_annotations': self.go_annotations,\
 				'config': self.config, \
 				'template_loader': self.template_loader, \
 				'template_env': self.template_env,\
@@ -70,8 +72,8 @@ class GOPCAServer(object):
 		self.app = tornado.web.Application([
 			(r'/static/(.*)$', tornado.web.StaticFileHandler, {'path': self.static_dir}),
 			(r'/submit$', SubmitHandler,dict(data=data),'submit'),
-			(r'/update-gene-annotation$', GeneAnnotationUpdateHandler,dict(data=data),'update-gene-annotations'),
-			(r'/update-go-annotation$', GOAnnotationUpdateHandler,dict(data=data),'update-go-annotations'),
+			(r'/update-gene-annotations$', GeneAnnotationUpdateHandler,dict(data=data),'update-gene-annotations'),
+			(r'/update-go-annotations$', GOAnnotationUpdateHandler,dict(data=data),'update-go-annotations'),
 			(r'/run/(.*)$', RunHandler,dict(data=data),'run'),
 			#(r'/sleep/(\d+)$', SleepHandler,{},'sleep'),
 			(r'/(.*)$', MainHandler,dict(data=data),'main'),

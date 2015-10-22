@@ -14,19 +14,8 @@ import tornado.web
 import numpy as np
 
 import tornado
+
 #from tornado import gen
-
-class TemplateHandler(tornado.web.RequestHandler):
-
-	def initialize(self,data):
-		self.data = data
-		self.runs = data['runs']
-		self.annotations = data['annotations']
-		self.template_env = data['template_env']
-
-	def get_template(self,fn):
-		return self.template_env.get_template(fn)
-
 #@tornado.gen.coroutine
 #def async_sleep(timeout):
 #	yield tornado.gen.Task(tornado.ioloop.IOLoop.instance().add_timeout, tornado.ioloop.IOLoop.instance().time() + timeout)
@@ -39,6 +28,18 @@ class SleepHandler(tornado.web.RequestHandler):
 		yield tornado.gen.Task(tornado.ioloop.IOLoop.instance().add_timeout, tornado.ioloop.IOLoop.instance().time() + float(n))
 		self.write("Awake! %s" % time.time())
 		self.finish()
+
+class TemplateHandler(tornado.web.RequestHandler):
+
+	def initialize(self,data):
+		self.data = data
+		self.runs = data['runs']
+		self.gene_annotations = data['gene_annotations']
+		self.go_annotations = data['go_annotations']
+		self.template_env = data['template_env']
+
+	def get_template(self,fn):
+		return self.template_env.get_template(fn)
 
 class MainHandler(TemplateHandler):
 

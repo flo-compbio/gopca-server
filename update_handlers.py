@@ -1,7 +1,15 @@
+import sys
 import os
+import re
+import subprocess as subproc
 import ftplib
 import urllib2
 from contextlib import closing
+
+import numpy as np
+import tornado.web
+
+import common
 
 class GeneAnnotationUpdateHandler(tornado.web.RequestHandler):
 	def initialize(self,data):
@@ -118,7 +126,7 @@ class GeneAnnotationUpdateHandler(tornado.web.RequestHandler):
 						os.remove(output_file)
 			
 		# update gene annotations
-		self.data['gene_annotations'] = find_gene_annotations(self.data_dir)
+		self.data['gene_annotations'] = common.find_gene_annotations(self.data_dir)
 		#print sp,data; sys.stdout.flush()
 
 class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
@@ -151,9 +159,11 @@ class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
 		versions = {}
 		with closing(urllib2.urlopen('ftp://ftp.ebi.ac.uk/pub/databases/GO/goa/current_release_numbers.txt')) as uh:
 			uh.readline()
-			for l in uh.readline():
+			for l in uh:
+				print l
 				fields = l.rstrip('\n').split('\t')
-				versions[fields[0]] = [l[1],l[2]]
+				print fields
+				versions[fields[0]] = [fields[1],fields[2]]
 		return versions
 
 	def post(self):
@@ -172,13 +182,14 @@ class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
 		for sp in self.species:
 			remote_dir = '/pub/databases/GO/goa/%s' %(sp.upper())
 			remote_name = 'gene_association.goa_%s.gz' %(sp.lower())
-			remote_path = '%s/%s' %(remote_dir_,remote_name)
+			remote_path = '%s/%s' %(remote_dir,remote_name)
 			url = 'ftp://%s%s' %(server,remote_path)
 			name = '%s_%s_%s.gaf.gz' %(sp,versions[sp][0],versions[sp][1])
 			output_file = self.data_dir + os.sep + name
 
 			# get remote file size
 			remote_size = ftp.size(remote_path)
+			print name,'Remote file size:',remote_size
 
 			# check if we need to download the file
 			if os.path.isfile(output_file) and os.path.getsize(output_file) == remote_size:
@@ -197,4 +208,4 @@ class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
 
 			
 			# read corresponding gene ontology version
-		self.data['go_annotations'] = find_go_annotations(self.data_dir)
+		self.data['go_annotations'] = common.find_go_annotations(self.data_dir)
