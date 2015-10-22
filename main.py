@@ -19,6 +19,8 @@ from tornado.httpclient import AsyncHTTPClient
 
 from items import GSRun,GSAnnotation
 from handlers import *
+from update_handlers import *
+from common import *
 
 @tornado.web.asynchronous
 def future_func(callback):
@@ -53,11 +55,13 @@ class GOPCAServer(object):
 		self.template_loader = FileSystemLoader(searchpath = self.template_dir)
 		self.template_env = Environment(loader = self.template_loader )
 
-		self.runs = self.find_runs()
-		self.annotations = self.find_annotations()
-		print 'Annotations:',self.annotations
+		self.runs = common.find_runs()
+		self.gene_annotations = common.find_gene_annotations()
+		self.go_annotations = common.find_go_annotations()
+		print 'gene annotations:',self.gene_annotations
+		print 'GO annotations:',self.go_annotations
 		print 'Runs:',self.runs
-		data = {'runs': self.runs, 'annotations': self.annotations,\
+		data = {'runs': self.runs, 'annotations': self.gene_annotations,\
 				'config': self.config, \
 				'template_loader': self.template_loader, \
 				'template_env': self.template_env,\
@@ -66,7 +70,8 @@ class GOPCAServer(object):
 		self.app = tornado.web.Application([
 			(r'/static/(.*)$', tornado.web.StaticFileHandler, {'path': self.static_dir}),
 			(r'/submit$', SubmitHandler,dict(data=data),'submit'),
-			(r'/update$', UpdateHandler,dict(data=data),'update'),
+			(r'/update-gene-annotation$', GeneAnnotationUpdateHandler,dict(data=data),'update-gene-annotations'),
+			(r'/update-go-annotation$', GOAnnotationUpdateHandler,dict(data=data),'update-go-annotations'),
 			(r'/run/(.*)$', RunHandler,dict(data=data),'run'),
 			#(r'/sleep/(\d+)$', SleepHandler,{},'sleep'),
 			(r'/(.*)$', MainHandler,dict(data=data),'main'),
@@ -152,23 +157,6 @@ class GOPCAServer(object):
 		config['cookie_key'] = args.cookie_key
 		config['species'] = args.species
 		return config
-
-	def find_runs(self):
-		base = os.path.basename(self.run_dir)
-		runs = set()
-		for w in os.walk(self.run_dir):
-			b = os.path.basename(w[0])
-			if b != base:
-				runs.add(GSRun(b))
-		return runs
-
-	def find_annotations(self):
-		annotations = set()
-		for f in os.listdir(self.data_dir):
-			print f
-			if os.path.isfile(self.data_dir + os.sep + f) and f.endswith('.gtf.gz'):
-				annotations.add(GSAnnotation(f))
-		return annotations
 
 	"""
 	@gen.coroutine

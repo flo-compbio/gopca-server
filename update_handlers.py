@@ -1,103 +1,7 @@
-# -*- coding: utf-8 -*-
-
-import sys
 import os
-import time
-import hashlib
 import ftplib
-import re
 import urllib2
 from contextlib import closing
-import subprocess as subproc
-
-import tornado.web
-import numpy as np
-
-import tornado
-#from tornado import gen
-
-class TemplateHandler(tornado.web.RequestHandler):
-
-	def initialize(self,data):
-		self.data = data
-		self.runs = data['runs']
-		self.annotations = data['annotations']
-		self.template_env = data['template_env']
-
-	def get_template(self,fn):
-		return self.template_env.get_template(fn)
-
-#@tornado.gen.coroutine
-#def async_sleep(timeout):
-#	yield tornado.gen.Task(tornado.ioloop.IOLoop.instance().add_timeout, tornado.ioloop.IOLoop.instance().time() + timeout)
-
-class SleepHandler(tornado.web.RequestHandler):
-
-	@tornado.gen.coroutine
-	def get(self, n):
-		#async_sleep(float(n))
-		yield tornado.gen.Task(tornado.ioloop.IOLoop.instance().add_timeout, tornado.ioloop.IOLoop.instance().time() + float(n))
-		self.write("Awake! %s" % time.time())
-		self.finish()
-
-class MainHandler(TemplateHandler):
-
-	def initialize(self,data):
-		super(MainHandler,self).initialize(data)
-		#self.data = data
-
-	def get_session_id(self):
-
-		session_id = ''
-		while not session_id:
-			ts = str(time.time())
-			ip = self.request.remote_ip
-			rnd = str(np.random.random())[2:]
-			h = hashlib.md5()
-			h.update(ts)
-			h.update(ip)
-			h.update(rnd)
-			session_id = h.hexdigest()
-
-			# check if ID already exists (even though it's very unlikely)
-			if session_id in self.runs:
-				session_id = ''
-
-		return session_id
-
-	def get(self,path):
-		template = self.get_template('index.html')
-		new = self.get_query_argument('new',default='0')
-		print "new:",new
-		session_id = None
-		if not (new == '1'): # we're not explicitly asked to start a new session
-			session_id = self.get_secure_cookie('session_id') # look for session cookie
-		if session_id is None: # new session (either asked explicitly, or no old session found)
-			session_id = self.get_session_id() # generate a new session ID
-		ts = str(time.time())
-		html_output = template.render(timestamp=ts,title='Main Page',new=new,\
-				runs=self.runs,gene_annotations=self.gene_annotations,go_annotations=self.go_annotations,\
-				session_id=session_id)
-		self.write(html_output)
-
-class SubmitHandler(TemplateHandler):
-
-	def initialize(self,data):
-		super(SubmitHandler,self).initialize(data)
-
-	def post(self):
-		session_id = self.get_body_argument('session_id')
-		self.set_secure_cookie('session_id',session_id)
-		self.write(session_id)
-
-class RunHandler(TemplateHandler):
-
-	def initialize(self,data):
-		super(RunHandler,self).initialize(data)
-		#self.data = data
-
-	def get(self,path):
-		self.write('Run!')
 
 class GeneAnnotationUpdateHandler(tornado.web.RequestHandler):
 	def initialize(self,data):
@@ -216,3 +120,81 @@ class GeneAnnotationUpdateHandler(tornado.web.RequestHandler):
 		# update gene annotations
 		self.data['gene_annotations'] = find_gene_annotations(self.data_dir)
 		#print sp,data; sys.stdout.flush()
+
+class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
+	def initialize(self,data):
+		self.data = data
+
+	@property
+	def config(self):
+		return self.data['config']
+
+	@property
+	def species(self):
+		return self.config['species']
+
+	@property
+	def data_dir(self):
+		return self.config['data_dir']
+
+	def test_checksums(self,path,checksum):
+		if not os.path.isfile(path): # not a file
+			return False
+
+		# calculate checksum
+		sub = subproc.Popen('sum %s' %(path),bufsize=-1,shell=True,stdout=subproc.PIPE)
+		file_checksum = sub.communicate()[0].rstrip('\n')
+		print "TEST:",file_checksum,checksum
+		return file_checksum == checksum
+
+	def get_current_versions(self):
+		versions = {}
+		with closing(urllib2.urlopen('ftp://ftp.ebi.ac.uk/pub/databases/GO/goa/current_release_numbers.txt')) as uh:
+			uh.readline()
+			for l in uh.readline():
+				fields = l.rstrip('\n').split('\t')
+				versions[fields[0]] = [l[1],l[2]]
+		return versions
+
+	def post(self):
+		server = 'ftp.ebi.ac.uk'
+		user = 'anonymous'
+		ftp = ftplib.FTP(server)
+		ftp.login(user)
+
+		#go_dir = 'pub'
+		#ftp.cwd(go_dir)
+
+		# get latest version
+		versions = self.get_current_versions()
+
+		# naming scheme: species_version_date.gaf.gz
+		for sp in self.species:
+			remote_dir = '/pub/databases/GO/goa/%s' %(sp.upper())
+			remote_name = 'gene_association.goa_%s.gz' %(sp.lower())
+			remote_path = '%s/%s' %(remote_dir_,remote_name)
+			url = 'ftp://%s%s' %(server,remote_path)
+			name = '%s_%s_%s.gaf.gz' %(sp,versions[sp][0],versions[sp][1])
+			output_file = self.data_dir + os.sep + name
+
+			# get remote file size
+			remote_size = ftp.size(remote_path)
+
+			# check if we need to download the file
+			if os.path.isfile(output_file) and os.path.getsize(output_file) == remote_size:
+				continue
+
+			# download file
+			print 'Downloading file "%s"...' %(url); sys.stdout.flush()
+			with closing(urllib2.urlopen(url)) as uh, open(output_file,'wb') as ofh:
+				ofh.write(uh.read())
+
+			# make sure download was successful
+			if (not os.path.isfile(output_file)) or (os.path.getsize(output_file) != remote_size):
+				print 'Download unsuccessful! Deleting file...'
+				if os.path.isfile(output_file): # race condition?
+					os.remove(output_file)
+
+			
+			# read corresponding gene ontology version
+		self.data['go_annotations'] = find_go_annotations(self.data_dir)

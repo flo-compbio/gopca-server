@@ -3,6 +3,8 @@
 Arguments
 ---------
 	runs: list of GSRun objects, containing the currently available runs
+	gene_annotations: list of GSGeneAnnotation objects
+	go_annotations: list of GSGOAnnotation objects
 
 #}
 
@@ -24,10 +26,18 @@ Arguments
 
 </table>
 
-<h3>Annotations</h3>
+<h3>Gene Annotations</h3>
 <table>
 	<tr><th>Name</th></tr>
-	{% for a in annotations %}
+	{% for a in gene_annotations %}
+	<tr><td>{{a.name}}</a></td></tr>
+	{% endfor %}
+</table>
+
+<h3>GO Annotations</h3>
+<table>
+	<tr><th>Name</th></tr>
+	{% for a in go_annotations %}
 	<tr><td>{{a.name}}</a></td></tr>
 	{% endfor %}
 </table>
