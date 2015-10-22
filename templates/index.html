@@ -24,9 +24,26 @@ Arguments
 
 </table>
 
+<h3>Annotations</h3>
+<table>
+	<tr><th>Name</th></tr>
+	{% for a in annotations %}
+	<tr><td>{{a.name}}</a></td></tr>
+	{% endfor %}
+</table>
+
+
+
 <form action="submit" method="post">
 <input type="hidden" name="session_id" value="{{session_id}}"/>
-<input type="submit"/>
+<input type="submit" value="Submit Job"/>
 </form>
+
+<h3>Update Data</h3>
+
+<form action="update" method="post">
+<input type="submit" value="Update Data"/>
+</form>
+
 
 {% endblock %}

@@ -12,11 +12,34 @@ from jinja2 import Environment, FileSystemLoader
 import tornado.ioloop
 import tornado.web
 
-from run import GSRun
+from tornado.concurrent import return_future
+from tornado import gen
+
+from tornado.httpclient import AsyncHTTPClient
+
+from items import GSRun,GSAnnotation
 from handlers import *
 
+@tornado.web.asynchronous
+def future_func(callback):
+	print 'Sleeping...'; sys.stdout.flush()
+	time.sleep(5)
+	print 'done!'; sys.stdout.flush()
+
+#@gen.engine
+#def caller():
+#	yield future_func()
+
 class GOPCAServer(object):
+
+	scientific_names = {
+		'human': 'Homo_sapiens',
+		'mouse': 'Mus_musculus'
+	}
+
 	def __init__(self,config=None):
+
+		self.counter = 0
 
 		if config is None:
 			config = self.get_config_from_cmdline()
@@ -25,20 +48,27 @@ class GOPCAServer(object):
 
 		# make sure run directory exists
 		self.make_sure_path_exists(self.run_dir)
+		self.make_sure_path_exists(self.data_dir)
 
 		self.template_loader = FileSystemLoader(searchpath = self.template_dir)
 		self.template_env = Environment(loader = self.template_loader )
 
 		self.runs = self.find_runs()
-		print self.runs
-		data = {'runs': self.runs, 'config': self.config, \
+		self.annotations = self.find_annotations()
+		print 'Annotations:',self.annotations
+		print 'Runs:',self.runs
+		data = {'runs': self.runs, 'annotations': self.annotations,\
+				'config': self.config, \
 				'template_loader': self.template_loader, \
-				'template_env': self.template_env}
+				'template_env': self.template_env,\
+				'scientific_names': self.scientific_names}
 
 		self.app = tornado.web.Application([
 			(r'/static/(.*)$', tornado.web.StaticFileHandler, {'path': self.static_dir}),
 			(r'/submit$', SubmitHandler,dict(data=data),'submit'),
+			(r'/update$', UpdateHandler,dict(data=data),'update'),
 			(r'/run/(.*)$', RunHandler,dict(data=data),'run'),
+			#(r'/sleep/(\d+)$', SleepHandler,{},'sleep'),
 			(r'/(.*)$', MainHandler,dict(data=data),'main'),
 		], cookie_secret=self.cookie_key)
 
@@ -47,8 +77,16 @@ class GOPCAServer(object):
 		return self.config['port']
 
 	@property
+	def species(self):
+		return self.config['species']
+
+	@property
 	def run_dir(self):
 		return self.config['run_dir']
+
+	@property
+	def data_dir(self):
+		return self.config['data_dir']
 
 	@property
 	def static_dir(self):
@@ -76,8 +114,10 @@ class GOPCAServer(object):
 		parser.add_argument('-k','--cookie-key',required=True,help='Secret cookie key')
 		parser.add_argument('-p','--port',type=int,default=8080,help='Port that the server listens on')
 		parser.add_argument('-r','--run-dir',default='runs',help='Directory for storing runs')
+		parser.add_argument('-d','--data-dir',default='data',help='Directory for storing annotation data')
 		parser.add_argument('-q','--disk-quota',type=float,default=5000.0,help='Maximal disk space to use, in MB')
-		parser.add_argument('-s','--max-file-size',type=float,default=500.0,help='Maximal GO-PCA input size, in MB')
+		parser.add_argument('-f','--max-file-size',type=float,default=500.0,help='Maximal GO-PCA input size, in MB')
+		parser.add_argument('-s','--species',nargs='+',default=['human','mouse'])
 		parser.add_argument('--template-dir',default='templates',help='Jinja2 template directory')
 		parser.add_argument('--static-dir',default='static',help='Directory for static content')
 		return parser
@@ -100,17 +140,17 @@ class GOPCAServer(object):
 		parser = self.get_argument_parser()
 		args = parser.parse_args()
 
-		run_dir = args.run_dir.rstrip(os.sep) + os.sep
-
 		# checks?
 		config = {}
 		config['port'] = args.port
-		config['run_dir'] = run_dir
+		config['run_dir'] = args.run_dir.rstrip(os.sep)
+		config['data_dir'] = args.data_dir.rstrip(os.sep)
 		config['disk_quota'] = args.disk_quota
 		config['max_file_size'] = args.max_file_size
 		config['template_dir'] = args.template_dir.rstrip(os.sep)
 		config['static_dir'] = args.static_dir.rstrip(os.sep)
 		config['cookie_key'] = args.cookie_key
+		config['species'] = args.species
 		return config
 
 	def find_runs(self):
@@ -122,8 +162,30 @@ class GOPCAServer(object):
 				runs.add(GSRun(b))
 		return runs
 
+	def find_annotations(self):
+		annotations = set()
+		for f in os.listdir(self.data_dir):
+			print f
+			if os.path.isfile(self.data_dir + os.sep + f) and f.endswith('.gtf.gz'):
+				annotations.add(GSAnnotation(f))
+		return annotations
+
+	"""
+	@gen.coroutine
+	def update(self):
+		print 'Update:',self.counter
+		respone = yield time.sleep(10)
+		self.counter += 1
+	"""
+
 	def run(self):
 		self.app.listen(self.port)
+		#ioloop = tornado.ioloop.IOLoop.instance()
+
+		#self.update_task = tornado.ioloop.PeriodicCallback(future_func,2*1000)
+		#self.update_task.start()
+		#tornado.ioloop.IOLoop.current().add_callback(self.update)
+
 		tornado.ioloop.IOLoop.current().start()
 
 def main(config=None):

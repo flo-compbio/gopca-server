@@ -1,6 +1,7 @@
 # project-specific
 run_server.sh
 runs/
+data/
 
 # sphinx
 docs/build/
