@@ -1,9 +1,12 @@
 import sys
 import os
+import csv
 import re
+import gzip
 import subprocess as subproc
 import ftplib
 import urllib2
+#import requests
 from contextlib import closing
 
 import numpy as np
@@ -166,6 +169,28 @@ class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
 				versions[fields[0]] = [fields[1],fields[2]]
 		return versions
 
+	def get_gaf_ontology_version(self,gaf_file):
+		version_pat = re.compile(r'!GO-version: .*/(\d{4}-\d\d-\d\d)/go\.owl$')
+		version = None
+		with gzip.open(gaf_file) as fh:
+		    reader = csv.reader(fh,dialect='excel-tab')
+		    l = reader.next()
+		    while l and l[0].startswith('!'):
+		        m = version_pat.match(l[0])
+		        if m is not None:
+		            version = m.group(1)
+		        l = reader.next()
+		return version
+
+	def get_obo_url(self,version):
+		url = 'http://viewvc.geneontology.org/viewvc/GO-SVN/ontology-releases/%s/' %(version)
+		body = common.read_url(url)
+		revision_pat = re.compile(r'<a href="/viewvc/GO-SVN\?view=revision&amp;revision=(\d+)"')
+		m = revision_pat.search(body)
+		rev = m.group(1)
+		obo_url = 'http://viewvc.geneontology.org/viewvc/GO-SVN/ontology-releases/%s/go-basic.obo?revision=%s' %(version,rev)
+		return obo_url
+
 	def post(self):
 		server = 'ftp.ebi.ac.uk'
 		user = 'anonymous'
@@ -174,38 +199,47 @@ class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
 
 		#go_dir = 'pub'
 		#ftp.cwd(go_dir)
+		version_pat = re.compile(r'!GO-version: .*/(\d{4}-\d\d-\d\d)/go\.owl$')
+		revision_pat = re.compile(r'<a href="/viewvc/GO-SVN\?view=revision&amp;revision=(\d+)"')
 
 		# get latest version
 		versions = self.get_current_versions()
 
 		# naming scheme: species_version_date.gaf.gz
 		for sp in self.species:
+
+			# locate the GAF file on the GOA server
 			remote_dir = '/pub/databases/GO/goa/%s' %(sp.upper())
 			remote_name = 'gene_association.goa_%s.gz' %(sp.lower())
 			remote_path = '%s/%s' %(remote_dir,remote_name)
 			url = 'ftp://%s%s' %(server,remote_path)
 			name = '%s_%s_%s.gaf.gz' %(sp,versions[sp][0],versions[sp][1])
-			output_file = self.data_dir + os.sep + name
 
-			# get remote file size
+			# get file size
 			remote_size = ftp.size(remote_path)
 			print name,'Remote file size:',remote_size
 
-			# check if we need to download the file
-			if os.path.isfile(output_file) and os.path.getsize(output_file) == remote_size:
-				continue
+			# check if we need to download the file by comparing it to the local file (if it exists)
+			gaf_file = self.data_dir + os.sep + name
+			if os.path.isfile(gaf_file) and os.path.getsize(gaf_file) == remote_size:
+				continue # also skip downloading OBO file
 
 			# download file
 			print 'Downloading file "%s"...' %(url); sys.stdout.flush()
-			with closing(urllib2.urlopen(url)) as uh, open(output_file,'wb') as ofh:
-				ofh.write(uh.read())
+			common.download_url(url,gaf_file)
 
 			# make sure download was successful
-			if (not os.path.isfile(output_file)) or (os.path.getsize(output_file) != remote_size):
+			if (not os.path.isfile(gaf_file)) or (os.path.getsize(gaf_file) != remote_size):
 				print 'Download unsuccessful! Deleting file...'
-				if os.path.isfile(output_file): # race condition?
-					os.remove(output_file)
+				if os.path.isfile(gaf_file): # race condition?
+					os.remove(gaf_file)
 
-			
 			# read corresponding gene ontology version
-		self.data['go_annotations'] = common.find_go_annotations(self.data_dir)
+			version = self.get_gaf_ontology_version(gaf_file)
+			# get the url of the corresponding "go-basic.obo" file on the GO SVN server
+			url = self.get_obo_url(version)
+			obo_file = self.data_dir + os.sep + '%s_%s_%s.obo' %(sp,versions[sp][0],versions[sp][1])
+			# download the obo file
+			common.download_url(url,obo_file)
+
+			self.data['go_annotations'] = common.find_go_annotations(self.data_dir)
