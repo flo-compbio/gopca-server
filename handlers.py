@@ -33,6 +33,7 @@ class TemplateHandler(tornado.web.RequestHandler):
 
 	def initialize(self,data):
 		self.data = data
+		self.config = data['config']
 		self.runs = data['runs']
 		self.gene_annotations = data['gene_annotations']
 		self.go_annotations = data['go_annotations']

@@ -14,7 +14,7 @@ import tornado.web
 
 from items import GSGeneAnnotation,GSGoAnnotation
 
-import common
+import util
 
 class GeneAnnotationUpdateHandler(tornado.web.RequestHandler):
 	def initialize(self,data):
@@ -189,7 +189,7 @@ class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
 
 	def get_obo_url(self,version):
 		url = 'http://viewvc.geneontology.org/viewvc/GO-SVN/ontology-releases/%s/' %(version)
-		body = common.read_url(url)
+		body = util.read_url(url)
 		revision_pat = re.compile(r'<a href="/viewvc/GO-SVN\?view=revision&amp;revision=(\d+)"')
 		m = revision_pat.search(body)
 		rev = m.group(1)
@@ -233,7 +233,7 @@ class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
 
 			# download file
 			print 'Downloading file "%s"...' %(url); sys.stdout.flush()
-			common.download_url(url,gaf_file)
+			util.download_url(url,gaf_file)
 
 			# make sure download was successful
 			if (not os.path.isfile(gaf_file)) or (os.path.getsize(gaf_file) != remote_size):
@@ -247,6 +247,6 @@ class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
 			url = self.get_obo_url(version)
 			obo_file = self.data_dir + os.sep + '%s_%s_%s.obo' %(spec,versions[name][0],versions[name][1])
 			# download the obo file
-			common.download_url(url,obo_file)
+			util.download_url(url,obo_file)
 
 		self.data['go_annotations'] = GSGoAnnotation.find_go_annotations(self.data_dir)

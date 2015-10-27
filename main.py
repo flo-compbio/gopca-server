@@ -6,6 +6,7 @@ import os
 import argparse
 import errno
 import time
+import shutil
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -21,7 +22,7 @@ from items import GSRun,GSGeneAnnotation,GSGoAnnotation
 from handlers import *
 from update_handlers import *
 from gopca_handlers import *
-import common
+import util
 
 @tornado.web.asynchronous
 def future_func(callback):
@@ -50,8 +51,8 @@ class GOPCAServer(object):
 		self.config = config
 
 		# make sure run directory exists
-		self.make_sure_path_exists(self.run_dir)
-		self.make_sure_path_exists(self.data_dir)
+		util.make_sure_path_exists(self.run_dir)
+		util.make_sure_path_exists(self.data_dir)
 
 		self.template_loader = FileSystemLoader(searchpath = self.template_dir)
 		self.template_env = Environment(loader = self.template_loader )
@@ -130,20 +131,6 @@ class GOPCAServer(object):
 		parser.add_argument('--template-dir',default='templates',help='Jinja2 template directory')
 		parser.add_argument('--static-dir',default='static',help='Directory for static content')
 		return parser
-
-	@staticmethod
-	def make_sure_path_exists(path):
-		""" Make sure a path exists.
-
-		Source: http://stackoverflow.com/a/5032238
-		Authors: StackOverflow users "Heikko Toivono" (http://stackoverflow.com/users/62596/heikki-toivonen) 
-		 		and "Bengt" (http://stackoverflow.com/users/906658/bengt)
-		"""
-		try:
-			os.makedirs(path)
-		except OSError as exception:
-			if exception.errno != errno.EEXIST:
-				raise
 
 	def get_config_from_cmdline(self):
 		parser = self.get_argument_parser()
