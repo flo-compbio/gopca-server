@@ -37,6 +37,7 @@ class TemplateHandler(tornado.web.RequestHandler):
 		self.gene_annotations = data['gene_annotations']
 		self.go_annotations = data['go_annotations']
 		self.template_env = data['template_env']
+		self.ts = str(time.time())
 
 	def get_template(self,fn):
 		return self.template_env.get_template(fn)
@@ -69,151 +70,46 @@ class MainHandler(TemplateHandler):
 	def get(self,path):
 		template = self.get_template('index.html')
 		new = self.get_query_argument('new',default='0')
-		print "new:",new
+
 		session_id = None
 		if not (new == '1'): # we're not explicitly asked to start a new session
 			session_id = self.get_secure_cookie('session_id') # look for session cookie
-		if session_id is None: # new session (either asked explicitly, or no old session found)
-			session_id = self.get_session_id() # generate a new session ID
-		ts = str(time.time())
-		html_output = template.render(timestamp=ts,title='Main Page',new=new,\
-				runs=self.runs,gene_annotations=self.gene_annotations,go_annotations=self.go_annotations,\
+
+		if session_id is not None:
+			self.redirect('/run/%s' %(session_id))
+			return
+
+		# reload even when using back button on Firefox
+		# (I tested it and it doesn't work without no-store)
+		# see http://blog.55minutes.com/2011/10/how-to-defeat-the-browser-back-button-cache/
+		self.add_header('Cache-Control','no-store, max-age=0, no-cache, must-revalidate')
+		#self.add_header('Expires','0')
+		#self.add_header('Pragma','no-cache')
+ 		# new session (either asked explicitly, or no old session found)
+		session_id = self.get_session_id() # generate a new session ID
+		run_ids = sorted(self.runs.keys())
+		html_output = template.render(timestamp=self.ts,title='Main Page',new=new,\
+				runs=run_ids,gene_annotations=self.gene_annotations,go_annotations=self.go_annotations,\
 				session_id=session_id)
 		self.write(html_output)
-
-class SubmitHandler(TemplateHandler):
-
-	def initialize(self,data):
-		super(SubmitHandler,self).initialize(data)
-
-	def post(self):
-		session_id = self.get_body_argument('session_id')
-		self.set_secure_cookie('session_id',session_id)
-		self.write(session_id)
 
 class RunHandler(TemplateHandler):
 
 	def initialize(self,data):
 		super(RunHandler,self).initialize(data)
-		#self.data = data
 
 	def get(self,path):
-		self.write('Run!')
+		print path
+		if path in self.runs: # and re.match(HASH_PATTERN) # to ensure that user cannot submit crap
+			template = self.get_template('run.html')
+			html_output = template.render(timestamp=self.ts,title='Run',run_id=path)
+			self.write(html_output)
+		else:
 
-class GeneAnnotationUpdateHandler(tornado.web.RequestHandler):
-	def initialize(self,data):
-		self.data = data
+			session_id = self.get_secure_cookie('session_id')
+			if session_id is not None and session_id == path:
+				self.clear_cookie('session_id')
 
-	@property
-	def scientific_names(self):
-		return self.data['scientific_names']
-
-	@property
-	def config(self):
-		return self.data['config']
-
-	@property
-	def species(self):
-		return self.config['species']
-
-	@property
-	def data_dir(self):
-		return self.config['data_dir']
-
-	def test_checksums(self,path,checksum):
-		if not os.path.isfile(path): # not a file
-			return False
-
-		# calculate checksum
-		sub = subproc.Popen('sum %s' %(path),bufsize=-1,shell=True,stdout=subproc.PIPE)
-		file_checksum = sub.communicate()[0].rstrip('\n')
-		print "TEST:",file_checksum,checksum
-		return file_checksum == checksum
-
-	def post(self):
-		server = 'ftp.ensembl.org'
-		#go_dir = 'pub/current_gtf'
-		go_dir = 'pub'
-		user = 'anonymous'
-
-		# get directory listnig
-		ftp = ftplib.FTP(server)
-		ftp.login(user)
-
-		data = []
-		#ftp.cwd(go_dir)
-		ftp.dir(go_dir,data.append)
-		#ftp.quit()
-
-		# find everything that ends in release-xx
-		pat = re.compile(r'.* release-(\d+)$')
-		release_numbers = []
-		for d in data:
-			m = pat.match(d)
-			if m is not None:
-				release_numbers.append(m.group(1))
-
-		release_numbers = np.int64(release_numbers)
-		latest = np.amax(release_numbers)
-
-		"""
-		for sp in self.species:
-			sc = self.scientific_names[sp].lower()
-			spdir = 'pub/release-%d/gtf/%s' %(latest,sc)
-			data = []
-			#ftp.dir(spdir,data.append)
-			cs_url = 'ftp://' + '/'.join([server,spdir,'CHECKSUMS'])
-			print cs_url
-			checksum = None
-			with closing(urllib2.urlopen(cs_url)) as uh:
-				checksum = uh.read()
-			print sp,checksum; sys.stdout.flush()
-		"""
-		for sp in self.species:
-
-			# find the precise name of the GTF file that we're interested in
-			sc = self.scientific_names[sp].lower()
-			spdir = 'pub/release-%d/gtf/%s' %(latest,sc)
-			data = []
-			ftp.dir(spdir,data.append)
-			gtf_file = []
-			for d in data:
-				i = d.rindex(' ')
-				fn = d[(i+1):]
-				if fn.endswith('.%d.gtf.gz' %(latest)):
-					gtf_file.append(fn)
-			assert len(gtf_file) == 1
-			gtf_file = gtf_file[0]
-			#print gtf_file
-
-			# download the CHECKSUMS file and create a mapping of file names to checksums
-			data = []
-			cs_path = '/'.join([spdir,'CHECKSUMS'])
-			#print cs_path
-			data = []
-			ftp.retrbinary('RETR %s' %(cs_path),data.append)
-			data = ''.join(data).split('\n')[:-1]
-			checksums = {}
-			for d in data:
-				s,fn = d.split('\t')
-				checksums[fn] = s
-
-			# compare checksums to see if we need to download the file
-			output_file = self.data_dir + os.sep + gtf_file
-			if self.test_checksums(output_file,checksums[gtf_file]):
-				print 'Checksums agree!'; sys.stdout.flush()
-			else:
-				print 'Downloading %s...' %(output_file); sys.stdout.flush()
-				gtf_path = '/'.join([spdir,gtf_file])
-				with open(output_file,'w') as ofh:
-					ftp.retrbinary('RETR %s' %(gtf_path),ofh.write)
-
-				print 'done!'; sys.stdout.flush()
-				if not self.test_checksums(output_file,checksums[gtf_file]):
-					print "ERROR: Checksums don't agree! Deleting downloaded file..."
-					if os.path.isfile(output_file): # race condition?
-						os.remove(output_file)
-			
-		# update gene annotations
-		self.data['gene_annotations'] = find_gene_annotations(self.data_dir)
-		#print sp,data; sys.stdout.flush()
+			template = self.get_template('404.html')
+			html_output = template.render(timestamp=self.ts,title='Error 404 - page not found')
+			self.write(html_output)

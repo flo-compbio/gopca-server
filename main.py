@@ -17,9 +17,10 @@ from tornado import gen
 
 from tornado.httpclient import AsyncHTTPClient
 
-from items import GSRun,GSGeneAnnotation,GSGOAnnotation
+from items import GSRun,GSGeneAnnotation,GSGoAnnotation
 from handlers import *
 from update_handlers import *
+from gopca_handlers import *
 import common
 
 @tornado.web.asynchronous
@@ -34,9 +35,9 @@ def future_func(callback):
 
 class GOPCAServer(object):
 
-	scientific_names = {
-		'human': 'Homo_sapiens',
-		'mouse': 'Mus_musculus'
+	species_names = {
+		'Homo_sapiens': 'human',
+		'Mus_musculus': 'mouse'
 	}
 
 	def __init__(self,config=None):
@@ -55,9 +56,9 @@ class GOPCAServer(object):
 		self.template_loader = FileSystemLoader(searchpath = self.template_dir)
 		self.template_env = Environment(loader = self.template_loader )
 
-		self.runs = common.find_runs(self.run_dir)
-		self.gene_annotations = common.find_gene_annotations(self.data_dir)
-		self.go_annotations = common.find_go_annotations(self.data_dir)
+		self.runs = GSRun.find_runs(self.run_dir)
+		self.gene_annotations = GSGeneAnnotation.find_gene_annotations(self.data_dir)
+		self.go_annotations = GSGoAnnotation.find_go_annotations(self.data_dir)
 		print 'gene annotations:',self.gene_annotations
 		print 'GO annotations:',self.go_annotations
 		print 'Runs:',self.runs
@@ -67,11 +68,12 @@ class GOPCAServer(object):
 				'config': self.config, \
 				'template_loader': self.template_loader, \
 				'template_env': self.template_env,\
-				'scientific_names': self.scientific_names}
+				'species_names': self.species_names}
 
 		self.app = tornado.web.Application([
 			(r'/static/(.*)$', tornado.web.StaticFileHandler, {'path': self.static_dir}),
-			(r'/submit$', SubmitHandler,dict(data=data),'submit'),
+			(r'/gopca$', GOPCAHandler,dict(data=data),'submit'),
+			(r'/delete-run$', DeleteRunHandler,dict(data=data),'delete-run'),
 			(r'/update-gene-annotations$', GeneAnnotationUpdateHandler,dict(data=data),'update-gene-annotations'),
 			(r'/update-go-annotations$', GOAnnotationUpdateHandler,dict(data=data),'update-go-annotations'),
 			(r'/run/(.*)$', RunHandler,dict(data=data),'run'),
@@ -124,7 +126,7 @@ class GOPCAServer(object):
 		parser.add_argument('-d','--data-dir',default='data',help='Directory for storing annotation data')
 		parser.add_argument('-q','--disk-quota',type=float,default=5000.0,help='Maximal disk space to use, in MB')
 		parser.add_argument('-f','--max-file-size',type=float,default=500.0,help='Maximal GO-PCA input size, in MB')
-		parser.add_argument('-s','--species',nargs='+',default=['human','mouse'])
+		parser.add_argument('-s','--species',nargs='+',default=['Homo_sapiens','Mus_musculus'])
 		parser.add_argument('--template-dir',default='templates',help='Jinja2 template directory')
 		parser.add_argument('--static-dir',default='static',help='Directory for static content')
 		return parser

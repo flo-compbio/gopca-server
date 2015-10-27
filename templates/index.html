@@ -18,14 +18,37 @@ Arguments
 {% endif %}
 <h3>Runs</h3>
 <table>
-	<tr><th>ID</th><th>Description</th><th>Species</th></tr>
-	{% for r in runs %}
-	<tr><td><a href="/runs/{{r.id}}">{{r.id}}</a></td><td></td><td></td></tr>
+	<tr><th>ID</th><th>Description</th><th>Species</th><th></th></tr>
+	{% for id_ in runs %}
+	<tr><td><a href="/runs/{{id_}}">{{id_}}</a></td><td></td><td></td>
+		<td><form action="delete-run" method="post"><input type="hidden" name="run_id" value="{{id_}}"/><input type="submit" value="delete"/></form></td>
+	</tr>
 	{#		<td>{{ds.description}}</td><td>{{ds.species}}</td></tr> #}
 	{% endfor %}
 
 </table>
 
+<h3>New Job</h3>
+<form action="gopca" method="post">
+	<p>Gene annotations</p>
+	<select name="gene_annotation">
+		{% for a in gene_annotations %}
+		<option value={{a.name}}>{{a.name}}</option>
+		{% endfor %}
+	</select>
+	<br/>
+	<p>GO annotations</p>
+	<select name="go_annotation">
+		{% for a in go_annotations %}
+		<option value={{a.name}}>{{a.name}}</option>
+		{% endfor %}
+	</select>
+	<br/><br/>
+	<input type="hidden" name="session_id" value="{{session_id}}"/>
+	<input type="submit" value="Submit Job"/>
+</form>
+
+{#
 <h3>Gene Annotations</h3>
 <table>
 	<tr><th>Name</th></tr>
@@ -41,13 +64,12 @@ Arguments
 	<tr><td>{{a.name}}</a></td></tr>
 	{% endfor %}
 </table>
+#}
 
-
-
-<form action="submit" method="post">
+<!-- <form action="submit" method="post">
 <input type="hidden" name="session_id" value="{{session_id}}"/>
 <input type="submit" value="Submit Job"/>
-</form>
+</form> //-->
 
 <h3>Update Annotation Data</h3>
 

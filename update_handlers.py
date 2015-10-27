@@ -12,6 +12,8 @@ from contextlib import closing
 import numpy as np
 import tornado.web
 
+from items import GSGeneAnnotation,GSGoAnnotation
+
 import common
 
 class GeneAnnotationUpdateHandler(tornado.web.RequestHandler):
@@ -19,8 +21,8 @@ class GeneAnnotationUpdateHandler(tornado.web.RequestHandler):
 		self.data = data
 
 	@property
-	def scientific_names(self):
-		return self.data['scientific_names']
+	def species_names(self):
+		return self.data['species_names']
 
 	@property
 	def config(self):
@@ -83,11 +85,12 @@ class GeneAnnotationUpdateHandler(tornado.web.RequestHandler):
 				checksum = uh.read()
 			print sp,checksum; sys.stdout.flush()
 		"""
-		for sp in self.species:
+		for spec in self.species:
+
+			spec_name = self.species_names[spec]
 
 			# find the precise name of the GTF file that we're interested in
-			sc = self.scientific_names[sp].lower()
-			spdir = 'pub/release-%d/gtf/%s' %(latest,sc)
+			spdir = 'pub/release-%d/gtf/%s' %(latest,spec.lower())
 			data = []
 			ftp.dir(spdir,data.append)
 			gtf_file = []
@@ -103,7 +106,6 @@ class GeneAnnotationUpdateHandler(tornado.web.RequestHandler):
 			# download the CHECKSUMS file and create a mapping of file names to checksums
 			data = []
 			cs_path = '/'.join([spdir,'CHECKSUMS'])
-			#print cs_path
 			data = []
 			ftp.retrbinary('RETR %s' %(cs_path),data.append)
 			data = ''.join(data).split('\n')[:-1]
@@ -129,8 +131,7 @@ class GeneAnnotationUpdateHandler(tornado.web.RequestHandler):
 						os.remove(output_file)
 			
 		# update gene annotations
-		self.data['gene_annotations'] = common.find_gene_annotations(self.data_dir)
-		#print sp,data; sys.stdout.flush()
+		self.data['gene_annotations'] = GSGeneAnnotation.find_gene_annotations(self.data_dir)
 
 class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
 	def initialize(self,data):
@@ -139,6 +140,10 @@ class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
 	@property
 	def config(self):
 		return self.data['config']
+
+	@property
+	def species_names(self):
+		return self.data['species_names']
 
 	@property
 	def species(self):
@@ -206,21 +211,23 @@ class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
 		versions = self.get_current_versions()
 
 		# naming scheme: species_version_date.gaf.gz
-		for sp in self.species:
+		for spec in self.species:
+
+			name = self.species_names[spec]
 
 			# locate the GAF file on the GOA server
-			remote_dir = '/pub/databases/GO/goa/%s' %(sp.upper())
-			remote_name = 'gene_association.goa_%s.gz' %(sp.lower())
-			remote_path = '%s/%s' %(remote_dir,remote_name)
+			remote_dir = '/pub/databases/GO/goa/%s' %(name.upper())
+			remote_file = 'gene_association.goa_%s.gz' %(name.lower())
+			remote_path = '%s/%s' %(remote_dir,remote_file)
 			url = 'ftp://%s%s' %(server,remote_path)
-			name = '%s_%s_%s.gaf.gz' %(sp,versions[sp][0],versions[sp][1])
+			file_name = '%s_%s_%s.gaf.gz' %(spec,versions[name][0],versions[name][1])
 
 			# get file size
 			remote_size = ftp.size(remote_path)
-			print name,'Remote file size:',remote_size
+			print 'Remote file size:',remote_size
 
 			# check if we need to download the file by comparing it to the local file (if it exists)
-			gaf_file = self.data_dir + os.sep + name
+			gaf_file = self.data_dir + os.sep + file_name
 			if os.path.isfile(gaf_file) and os.path.getsize(gaf_file) == remote_size:
 				continue # also skip downloading OBO file
 
@@ -234,12 +241,12 @@ class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
 				if os.path.isfile(gaf_file): # race condition?
 					os.remove(gaf_file)
 
-			# read corresponding gene ontology version
+			# get corresponding gene ontology version fromt the header of the GAF file
 			version = self.get_gaf_ontology_version(gaf_file)
 			# get the url of the corresponding "go-basic.obo" file on the GO SVN server
 			url = self.get_obo_url(version)
-			obo_file = self.data_dir + os.sep + '%s_%s_%s.obo' %(sp,versions[sp][0],versions[sp][1])
+			obo_file = self.data_dir + os.sep + '%s_%s_%s.obo' %(spec,versions[name][0],versions[name][1])
 			# download the obo file
 			common.download_url(url,obo_file)
 
-			self.data['go_annotations'] = common.find_go_annotations(self.data_dir)
+		self.data['go_annotations'] = GSGoAnnotation.find_go_annotations(self.data_dir)
