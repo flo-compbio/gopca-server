@@ -21,6 +21,10 @@ class GeneAnnotationUpdateHandler(tornado.web.RequestHandler):
         self.data = data
 
     @property
+    def logger(self):
+        return self.data['logger']
+
+    @property
     def species_names(self):
         return self.data['species_names']
 
@@ -43,7 +47,7 @@ class GeneAnnotationUpdateHandler(tornado.web.RequestHandler):
         # calculate checksum
         sub = subproc.Popen('sum %s' %(path),bufsize=-1,shell=True,stdout=subproc.PIPE)
         file_checksum = sub.communicate()[0].rstrip('\n')
-        print "TEST:",file_checksum,checksum
+        self.logger.debug('TEST: %s %s', str(file_checksum), str(checksum))
         return file_checksum == checksum
 
     def post(self):
@@ -101,7 +105,7 @@ class GeneAnnotationUpdateHandler(tornado.web.RequestHandler):
                     gtf_file.append(fn)
             assert len(gtf_file) == 1
             gtf_file = gtf_file[0]
-            #print gtf_file
+            #self.logger.debug(gtf_file)
 
             # download the CHECKSUMS file and create a mapping of file names to checksums
             data = []
@@ -117,16 +121,16 @@ class GeneAnnotationUpdateHandler(tornado.web.RequestHandler):
             # compare checksums to see if we need to download the file
             output_file = self.data_dir + os.sep + gtf_file
             if self.test_checksums(output_file,checksums[gtf_file]):
-                print 'Checksums agree!'; sys.stdout.flush()
+                self.logger.debug('Checksums agree!')
             else:
-                print 'Downloading %s...' %(output_file); sys.stdout.flush()
+                self.logger.debug('Downloading %s...', output_file)
                 gtf_path = '/'.join([spdir,gtf_file])
                 with open(output_file,'w') as ofh:
                     ftp.retrbinary('RETR %s' %(gtf_path),ofh.write)
 
-                print 'done!'; sys.stdout.flush()
+                self.logger.debug('done!')
                 if not self.test_checksums(output_file,checksums[gtf_file]):
-                    print "ERROR: Checksums don't agree! Deleting downloaded file..."
+                    self.logger.debug('ERROR: Checksums don''t agree! Deleting downloaded file...')
                     if os.path.isfile(output_file): # race condition?
                         os.remove(output_file)
             
@@ -140,6 +144,10 @@ class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
     @property
     def config(self):
         return self.data['config']
+
+    @property
+    def logger(self):
+        return self.data['logger']
 
     @property
     def species_names(self):
@@ -160,7 +168,7 @@ class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
         # calculate checksum
         sub = subproc.Popen('sum %s' %(path),bufsize=-1,shell=True,stdout=subproc.PIPE)
         file_checksum = sub.communicate()[0].rstrip('\n')
-        print "TEST:",file_checksum,checksum
+        self.logger.debug('TEST: %s %s',str(file_checksum),str(checksum))
         return file_checksum == checksum
 
     def get_current_versions(self):
@@ -168,9 +176,9 @@ class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
         with closing(urllib2.urlopen('ftp://ftp.ebi.ac.uk/pub/databases/GO/goa/current_release_numbers.txt')) as uh:
             uh.readline()
             for l in uh:
-                print l
+                self.logger.debug(l)
                 fields = l.rstrip('\n').split('\t')
-                print fields
+                self.logger.debug(str(fields))
                 versions[fields[0]] = [fields[1],fields[2]]
         return versions
 
@@ -224,7 +232,7 @@ class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
 
             # get file size
             remote_size = ftp.size(remote_path)
-            print 'Remote file size:',remote_size
+            self.logger.debug('Remote file size: %s', str(remote_size))
 
             # check if we need to download the file by comparing it to the local file (if it exists)
             gaf_file = self.data_dir + os.sep + file_name
@@ -232,12 +240,12 @@ class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
                 continue # also skip downloading OBO file
 
             # download file
-            print 'Downloading file "%s"...' %(url); sys.stdout.flush()
+            self.logger.debug('Downloading file "%s"...', url)
             util.download_url(url,gaf_file)
 
             # make sure download was successful
             if (not os.path.isfile(gaf_file)) or (os.path.getsize(gaf_file) != remote_size):
-                print 'Download unsuccessful! Deleting file...'
+                self.logger.debug('Download unsuccessful! Deleting file...')
                 if os.path.isfile(gaf_file): # race condition?
                     os.remove(gaf_file)
 

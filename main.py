@@ -7,6 +7,7 @@ import argparse
 import errno
 import time
 import shutil
+import logging
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -60,16 +61,30 @@ class GOPCAServer(object):
         self.runs = GSRun.find_runs(self.run_dir)
         self.gene_annotations = GSGeneAnnotation.find_gene_annotations(self.data_dir)
         self.go_annotations = GSGoAnnotation.find_go_annotations(self.data_dir)
-        print 'gene annotations:',self.gene_annotations
-        print 'GO annotations:',self.go_annotations
-        print 'Runs:',self.runs
-        data = {'runs': self.runs,
+
+        # configure logger
+        log_level = logging.INFO
+        if config['verbose']:
+            log_level = logging.DEBUG
+
+        log_format = '[%(asctime)s] %(levelname)s: %(message)s'
+        log_datefmt = '%Y-%m-%d %H:%M:%S'
+        # when filename is not None, "stream" parameter is ignored (see https://docs.python.org/2/library/logging.html#logging.basicConfig)
+        logging.basicConfig(filename=config['log_file'],stream=sys.stdout,level=log_level,format=log_format,datefmt=log_datefmt)
+        self.logger = logging.getLogger()
+        logger = self.logger
+
+        logger.info('Gene annotations: %s', ', '.join(str(ann) for ann in self.gene_annotations))
+        logger.info('GO annotations: %s', ', '.join(str(ann) for ann in self.go_annotations))
+        logger.info('Runs: %s', ', '.join(str(r) for r in self.runs))
+        data = {'runs': self.runs,\
                 'gene_annotations': self.gene_annotations,\
                 'go_annotations': self.go_annotations,\
                 'config': self.config, \
                 'template_loader': self.template_loader, \
                 'template_env': self.template_env,\
-                'species_names': self.species_names}
+                'species_names': self.species_names,\
+                'logger': self.logger}
 
         self.app = tornado.web.Application([
             (r'/static/(.*)$', tornado.web.StaticFileHandler, {'path': self.static_dir}),
@@ -130,6 +145,9 @@ class GOPCAServer(object):
         parser.add_argument('-s','--species',nargs='+',default=['Homo_sapiens','Mus_musculus'])
         parser.add_argument('--template-dir',default='templates',help='Jinja2 template directory')
         parser.add_argument('--static-dir',default='static',help='Directory for static content')
+        parser.add_argument('-l','--log-file',default=None,help='Log file - if not specified, print to stdout')
+        parser.add_argument('-v','--verbose',action='store_true',help='Verbose output')
+
         return parser
 
     def get_config_from_cmdline(self):
@@ -147,6 +165,8 @@ class GOPCAServer(object):
         config['static_dir'] = args.static_dir.rstrip(os.sep)
         config['cookie_key'] = args.cookie_key
         config['species'] = args.species
+        config['log_file'] = args.log_file
+        config['verbose'] = args.verbose
         return config
 
     """

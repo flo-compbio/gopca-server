@@ -40,6 +40,10 @@ class TemplateHandler(tornado.web.RequestHandler):
         self.template_env = data['template_env']
         self.ts = str(time.time())
 
+    @property
+    def logger(self):
+        return self.data['logger']
+
     def get_template(self,fn):
         return self.template_env.get_template(fn)
 
@@ -100,7 +104,7 @@ class RunHandler(TemplateHandler):
         super(RunHandler,self).initialize(data)
 
     def get(self,path):
-        print path
+        self.logger.debug('RunHandler path: %s',path)
         if path in self.runs: # and re.match(HASH_PATTERN) # to ensure that user cannot submit crap
             template = self.get_template('run.html')
             html_output = template.render(timestamp=self.ts,title='Run',run_id=path)
