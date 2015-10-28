@@ -7,11 +7,13 @@ import argparse
 import errno
 import time
 import shutil
+import ssl
 
 from jinja2 import Environment, FileSystemLoader
 
 import tornado.ioloop
 import tornado.web
+import tornado.httpserver
 
 from tornado.concurrent import return_future
 from tornado import gen
@@ -81,6 +83,15 @@ class GOPCAServer(object):
             #(r'/sleep/(\d+)$', SleepHandler,{},'sleep'),
             (r'/(.*)$', MainHandler,dict(data=data),'main'),
         ], cookie_secret=self.cookie_key)
+        
+        self.ssl_ctx = None
+        if self.ssl_dir is not None:
+            util.make_sure_path_exists(self.ssl_dir)
+
+            self.ssl_ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+            self.ssl_ctx.load_cert_chain(os.path.join(self.ssl_dir, "server.crt"), os.path.join(self.ssl_dir, "server.key"))
+    
+        self.server = tornado.httpserver.HTTPServer(self.app, ssl_options=self.ssl_ctx)
 
     @property
     def port(self):
@@ -97,6 +108,10 @@ class GOPCAServer(object):
     @property
     def data_dir(self):
         return self.config['data_dir']
+
+    @property
+    def ssl_dir(self):
+        return self.config['ssl_dir']
 
     @property
     def static_dir(self):
@@ -128,6 +143,7 @@ class GOPCAServer(object):
         parser.add_argument('-q','--disk-quota',type=float,default=5000.0,help='Maximal disk space to use, in MB')
         parser.add_argument('-f','--max-file-size',type=float,default=500.0,help='Maximal GO-PCA input size, in MB')
         parser.add_argument('-s','--species',nargs='+',default=['Homo_sapiens','Mus_musculus'])
+        parser.add_argument('--ssl-dir',default=None,help='SSL certificate and private key directory')
         parser.add_argument('--template-dir',default='templates',help='Jinja2 template directory')
         parser.add_argument('--static-dir',default='static',help='Directory for static content')
         return parser
@@ -143,6 +159,7 @@ class GOPCAServer(object):
         config['data_dir'] = args.data_dir.rstrip(os.sep)
         config['disk_quota'] = args.disk_quota
         config['max_file_size'] = args.max_file_size
+        config['ssl_dir'] = args.ssl_dir
         config['template_dir'] = args.template_dir.rstrip(os.sep)
         config['static_dir'] = args.static_dir.rstrip(os.sep)
         config['cookie_key'] = args.cookie_key
@@ -158,7 +175,7 @@ class GOPCAServer(object):
     """
 
     def run(self):
-        self.app.listen(self.port)
+        self.server.listen(self.port)
         #ioloop = tornado.ioloop.IOLoop.instance()
 
         #self.update_task = tornado.ioloop.PeriodicCallback(future_func,2*1000)
