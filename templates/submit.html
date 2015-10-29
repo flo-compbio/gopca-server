@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Submission</h2>
+<p>Run submitted!</p>
+<p>Your results will be available under the following URL: <a href="/run/{{run_id}}" id="host_url">?</a></p>
+<p><a href="/?new=1">New Run</a></p>
+<script type="text/javascript">
+//<![CDATA[
+document.getElementById("host_url").innerHTML = location.protocol + '//' + location.host + '/run/{{run_id}}';
+//]]>
+</script>
+{% endblock %}

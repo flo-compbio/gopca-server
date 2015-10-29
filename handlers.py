@@ -51,6 +51,19 @@ class TemplateHandler(tornado.web.RequestHandler):
     def get_template(self,fn):
         return self.template_env.get_template(fn)
 
+    def generate_session_id(self):
+
+        ts = str(time.time())
+        ip = self.request.remote_ip
+        rnd = str(np.random.random())[2:]
+        h = hashlib.md5()
+        h.update(ts)
+        h.update(ip)
+        h.update(rnd)
+        session_id = h.hexdigest()
+
+        return session_id
+
 class MainHandler(TemplateHandler):
 
     def initialize(self,data):
@@ -76,9 +89,16 @@ class MainHandler(TemplateHandler):
 
         return session_id
 
+    def update_run_status(self):
+        for id_,r in self.runs.iteritems():
+            if r.update_status():
+                r.store_data()
+
     def get(self,path):
         template = self.get_template('index.html')
         new = self.get_query_argument('new',default='0')
+
+        self.logger.debug(', '.join([str(r) for r in self.runs.values()]))
 
         session_id = None
         if not (new == '1'): # we're not explicitly asked to start a new session
@@ -87,6 +107,8 @@ class MainHandler(TemplateHandler):
         if session_id is not None:
             self.redirect('/run/%s' %(session_id))
             return
+
+        self.update_run_status()
 
         # reload even when using back button on Firefox
         # (I tested it and it doesn't work without no-store)
@@ -97,10 +119,11 @@ class MainHandler(TemplateHandler):
         # new session (either asked explicitly, or no old session found)
         session_id = self.get_session_id() # generate a new session ID
         self.logger.debug('Species: %s', ', '.join(self.species))
+
         run_ids = sorted(self.runs.keys())
+        runs = sorted(self.runs.values(),key=lambda r:r.submit_time)
         html_output = template.render(timestamp=self.ts,title='Main Page',new=new,\
-                runs=run_ids,species=self.species,gene_annotations=self.gene_annotations,go_annotations=self.go_annotations,\
-                session_id=session_id)
+                runs=runs,species=self.species,gene_annotations=self.gene_annotations,go_annotations=self.go_annotations)
         self.write(html_output)
 
 class RunHandler(TemplateHandler):
@@ -111,8 +134,20 @@ class RunHandler(TemplateHandler):
     def get(self,path):
         self.logger.debug('RunHandler path: %s',path)
         if path in self.runs: # and re.match(HASH_PATTERN) # to ensure that user cannot submit crap
-            template = self.get_template('run.html')
-            html_output = template.render(timestamp=self.ts,title='Run',run_id=path)
+
+            run = self.runs[path]
+
+            # check status
+            if run.update_status():
+                run.store_data()
+
+            if run.is_running: # status: running
+                template = self.get_template('run_running.html')
+                html_output = template.render(timestamp=self.ts,title='Run',run_id=path,update_seconds=3)
+
+            else:
+                template = self.get_template('run.html')
+                html_output = template.render(timestamp=self.ts,title='Run',run_id=path)
             self.write(html_output)
         else:
 

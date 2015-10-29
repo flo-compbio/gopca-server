@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>GO-PCA Run</h2>
+<div>ID:<pre>{{run_id}}<pre></div>
+<p>Status: Running<p>
+<p>This page automatically updates every {{update_seconds}} seconds.</p>
+<p><a href="/?new=1">New Run</a></p>
+<script type="text/javascript">
+//<![CDATA[
+setTimeout('location.reload(true);',{{update_seconds * 1000}});
+//]]>
+</script>
+{% endblock %}

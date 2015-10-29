@@ -11,17 +11,23 @@ Arguments
 {% extends "base.html" %}
 {% block content %}
 <h2>GO-PCA Server</h2>
-<p class="test">Session ID:</p><pre>{{session_id}}</pre>
-{% if new != "1" %}
-{# we're not starting a new session - include a link to do so #}
-<p><a href="?new=1">New Session</a></p>
-{% endif %}
+{# <p><a href="?new=1">New Session</a></p> #}
 <h3>Runs</h3>
 <table>
-    <tr><th>ID</th><th>Description</th><th>Species</th><th></th></tr>
-    {% for id_ in runs %}
-    <tr><td><a href="/runs/{{id_}}">{{id_}}</a></td><td></td><td></td>
-        <td><form action="delete-run" method="post"><input type="hidden" name="run_id" value="{{id_}}"/><input type="submit" value="delete"/></form></td>
+    <tr>
+        <th>ID</th>
+        <th>Submission Time (UTC)</th>
+        <th>Description</th>
+        <th>Species</th>
+        <th>Status</th>
+        <th></th></tr>
+    {% for r in runs %}
+    <tr>
+        <td><a href="/runs/{{r.id}}">{{r.id}}</a></td>
+        <td>{{r.submit_time_html}}</td><td>{{r.description}}</td>
+        <td>{{r.species}}</td>
+        <td>{{r.status_html}}</td>
+        <td><form action="delete-run" method="post"><input type="hidden" name="run_id" value="{{r.id}}"/><input type="submit" value="delete"/></form></td>
     </tr>
     {#      <td>{{ds.description}}</td><td>{{ds.species}}</td></tr> #}
     {% endfor %}
@@ -30,27 +36,66 @@ Arguments
 
 <h3>New Run</h3>
 <form action="gopca" method="post">
+    <p>Description</p>
+    <input name="Description"/>
     <p>Species</p>
     <select name="species">
         {% for s in species %}
         <option value={{s}}>{{s}}</option>
         {% endfor %}
     </select>
-    <p>Gene annotations</p>
-    <select name="gene_annotation">
-        {% for a in gene_annotations %}
-        <option value={{a.name}}>{{a.name}}</option>
-        {% endfor %}
-    </select>
-    <br/>
-    <p>GO annotations</p>
-    <select name="go_annotation">
-        {% for a in go_annotations %}
-        <option value={{a.name}}>{{a.name}}</option>
-        {% endfor %}
-    </select>
     <br/><br/>
-    <input type="hidden" name="session_id" value="{{session_id}}"/>
+    <fieldset>
+        <legend>Gene annotations</legend>
+        <select name="gene_annotation">
+            {% for a in gene_annotations %}
+            <option value={{a.name}}>{{a.name}}</option>
+            {% endfor %}
+        </select>
+    </fieldset>
+    <br/>
+    <fieldset>
+        <legend>GO Annotations</legend>
+        <select name="go_annotation">
+            {% for a in go_annotations %}
+            <option value={{a.name}}>{{a.name}}</option>
+            {% endfor %}
+        </select>
+        <br/><br/>
+        <input type="text" size=10 name="go_min_genes" value="5"/>Min. number of genes per GO term<br/>
+        <input type="text" size=10 name="go_max_genes" value="200"/>Max. number of genes per GO term<br/>
+        <br/>
+        <fieldset>
+            <legend>Select Evidence</legend>
+            {# default: ['IDA','IGI','IMP','ISO','ISS','IC','NAS','TAS'] #}
+            
+            <input type="checkbox" name="go_evidence" value="EXP"/>EXP - Inferred from Experiment<br/>
+            <input type="checkbox" name="go_evidence" value="IDA" checked="checked"/>IDA - Inferred from Direct Assay<br/>
+            <input type="checkbox" name="go_evidence" value="IPI"/>IPI - Inferred from Physical Interaction<br/>
+            <input type="checkbox" name="go_evidence" value="IMP" checked="checked"/>IMP - Inferred from Mutant Phenotype<br/>
+            <input type="checkbox" name="go_evidence" value="IGI" checked="checked"/>IGI - Inferred from Genetic Interaction<br/>
+            <input type="checkbox" name="go_evidence" value="IEP"/>IEP - Inferred from Expression Pattern<br/>
+            <br/>
+            <input type="checkbox" name="go_evidence" value="ISS" checked="checked"/>ISS - Inferred from Sequence or Structural Similarity<br/>
+            <input type="checkbox" name="go_evidence" value="ISO" checked="checked"/>ISO - Inferred from Sequence Orthology<br/>
+            <input type="checkbox" name="go_evidence" value="ISA"/>ISA - Inferred from Sequence Alignment<br/>
+            <input type="checkbox" name="go_evidence" value="ISM"/>ISM - Inferred from Sequence Model<br/>
+            <input type="checkbox" name="go_evidence" value="IGC"/>IGC - Inferred from Genomic Context<br/>
+            <input type="checkbox" name="go_evidence" value="IBA"/>IBA - Inferred from Biological Aspect of Ancestor<br/>
+            <input type="checkbox" name="go_evidence" value="IBD"/>IBD - Inferred from Biological Aspect of Descendant<br/>
+            <input type="checkbox" name="go_evidence" value="IKR"/>IKR - Inferred from Key Residues<br/>
+            <input type="checkbox" name="go_evidence" value="IRD"/>IRD - Inferred from Rapid Divergence<br/>
+            <input type="checkbox" name="go_evidence" value="RCA"/>RCA - Inferred from Reviewed Computational Analysis<br/>
+            <br/>
+            <input type="checkbox" name="go_evidence" value="NAS" checked="checked"/>NAS - Non-traceable Author Statement<br/>
+            <input type="checkbox" name="go_evidence" value="TAS" checked="checked"/>TAS - Traceable Author Statement<br/>
+            <input type="checkbox" name="go_evidence" value="IC" checked="checked"/>IC - Inferred by Curator<br/>
+            <br/>
+            <input type="checkbox" name="go_evidence" value="IEA"/>IEA - Inferred from Electronic Annotation<br/>
+        </fieldset>
+        <br/>
+    </fieldset>
+    <br/>
     <input type="submit" value="Submit Job"/>
 </form>
 

@@ -1,4 +1,7 @@
 #!/usr/bin/env python2.7
+
+
+
 # -*- coding: utf-8 -*-
 
 import sys
@@ -182,7 +185,7 @@ class GOPCAServer(object):
         config['template_dir'] = args.template_dir.rstrip(os.sep)
         config['static_dir'] = args.static_dir.rstrip(os.sep)
         config['cookie_key'] = args.cookie_key
-        config['species'] = args.species
+        config['species'] = sorted(args.species)
         config['log_file'] = args.log_file
         config['verbose'] = args.verbose
         return config
