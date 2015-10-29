@@ -36,6 +36,16 @@ class GOPCAHandler(TemplateHandler):
         self.logger.debug('GOPCAHandler: Creating directory "%s"...', run_dir)
         util.make_sure_path_exists(run_dir)
 
+        # create bash file
+        species = self.get_body_argument('species')
+        gene_annotation_file = self.get_body_argument('gene_annotation')
+        template = self.get_template('gopca.sh')
+        script = template.render(species=species,gene_annotation_file=gene_annotation_file)
+        output_file = run_dir + os.sep + 'gopca.sh'
+        with open(output_file,'w') as ofh:
+            ofh.write(script)
+        self.logger.debug('Wrote file "%s".',output_file)
+
 class DeleteRunHandler(TemplateHandler):
 
     def initialize(self,data):

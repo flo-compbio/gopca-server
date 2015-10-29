@@ -85,6 +85,7 @@ class GOPCAServer(object):
                 'config': self.config, \
                 'template_loader': self.template_loader, \
                 'template_env': self.template_env,\
+                'species': self.species,\
                 'species_names': self.species_names,\
                 'logger': self.logger}
 

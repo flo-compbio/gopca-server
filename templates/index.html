@@ -30,6 +30,12 @@ Arguments
 
 <h3>New Run</h3>
 <form action="gopca" method="post">
+    <p>Species</p>
+    <select name="species">
+        {% for s in species %}
+        <option value={{s}}>{{s}}</option>
+        {% endfor %}
+    </select>
     <p>Gene annotations</p>
     <select name="gene_annotation">
         {% for a in gene_annotations %}

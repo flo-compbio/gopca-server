@@ -44,6 +44,10 @@ class TemplateHandler(tornado.web.RequestHandler):
     def logger(self):
         return self.data['logger']
 
+    @property
+    def species(self):
+        return self.data['species']
+
     def get_template(self,fn):
         return self.template_env.get_template(fn)
 
@@ -92,9 +96,10 @@ class MainHandler(TemplateHandler):
         #self.add_header('Pragma','no-cache')
         # new session (either asked explicitly, or no old session found)
         session_id = self.get_session_id() # generate a new session ID
+        self.logger.debug('Species: %s', ', '.join(self.species))
         run_ids = sorted(self.runs.keys())
         html_output = template.render(timestamp=self.ts,title='Main Page',new=new,\
-                runs=run_ids,gene_annotations=self.gene_annotations,go_annotations=self.go_annotations,\
+                runs=run_ids,species=self.species,gene_annotations=self.gene_annotations,go_annotations=self.go_annotations,\
                 session_id=session_id)
         self.write(html_output)
 
