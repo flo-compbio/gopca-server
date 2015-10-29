@@ -2,6 +2,7 @@
 run_server.sh
 runs/
 data/
+ssl/
 
 # sphinx
 docs/build/
