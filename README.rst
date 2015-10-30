@@ -6,13 +6,14 @@ Start
 
 .. code-block:: bash
 
-    $ ./main.py -k [your_secret_cookie_phrase] [-p PORT]
+    $ python setup.py develop
+    $ go-pca-server.py -d data_dir -r run_dir -k your_secret_cookie_phrase [-p port]
 
 
 Copyright and License
 ---------------------
 
-Copyright (c) 2015 Florian Wagner
+Copyright (c) 2015 Florian Wagner, Razvan Panea
 
 ::
 

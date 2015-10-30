@@ -61,17 +61,20 @@ class GOPCAHandler(TemplateHandler):
 
         # create bash file
         species_name = self.species_names[species]
-        gene_annotation_file = os.sep.join(['..','..',self.data_dir,self.get_body_argument('gene_annotation') + '.gtf.gz'])
+        gene_annotation_file = self.data_dir + os.sep + self.get_body_argument('gene_annotation') + '.gtf.gz'
 
         go_annotation = self.get_body_argument('go_annotation')
-        gene_ontology_file = os.sep.join(['..','..',self.data_dir,go_annotation + '.obo'])
-        go_association_file = os.sep.join(['..','..',self.data_dir,go_annotation + '.gaf.gz'])
+        gene_ontology_file = self.data_dir + os.sep + go_annotation + '.obo'
+        go_association_file = self.data_dir + os.sep + go_annotation + '.gaf.gz'
 
         evidence = self.get_body_arguments('go_evidence')
         min_genes = str(int(self.get_body_argument('go_min_genes')))
         max_genes = str(int(self.get_body_argument('go_max_genes')))
         self.logger.debug('Evidence: %s', str(evidence))
         #evidence_str = ' '.join(['"%s"' %(str(e)) for e in evidence])
+
+        #def esc(fn):
+        #    return fn.replace(' ',r'\ ')
 
         template = self.get_template('gopca.sh')
         script = template.render(species_name=species_name,gene_annotation_file=gene_annotation_file,
@@ -86,7 +89,8 @@ class GOPCAHandler(TemplateHandler):
         st = os.stat(output_file)
         os.chmod(output_file, st.st_mode | stat.S_IXUSR)
         log_file = run_dir + os.sep + 'gopca_log.txt'
-        cmd = '%s > %s 2>&1' %(output_file,log_file)
+        cmd = '"%s" > "%s" 2>&1' %(output_file,log_file)
+        self.logger.debug('Command: %s',cmd)
         subproc.Popen(cmd,shell=True,executable='/bin/bash')
 
         # update run status

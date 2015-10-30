@@ -20,10 +20,14 @@ EVIDENCE_STR="{% for e in go_evidence %} {{e}}{% endfor %}"
 
 echo "GO-PCA Run started!"
 
-pushd ${DIR} > /dev/null 2>&1
+pushd "${DIR}" > /dev/null 2>&1
 
-if ! (gunzip -c {{gene_annotation_file}} | extract_protein_coding_genes.py -a - -s {{species_name}} -l extract_genes_log.txt \
-        -o ${GENE_FILE}) ; then
+#echo "Current working directory: `pwd`"
+
+echo "Generating list of protein-coding genes..."
+if ! (gunzip -c "{{gene_annotation_file}}" | extract_protein_coding_genes.py -a - -s {{species_name}} -l extract_genes_log.txt \
+        -o "${GENE_FILE}") ; then
+    echo "Failed!"
     touch FAILURE
     exit 0
 fi
@@ -32,8 +36,10 @@ touch SUCCESS
 popd > /dev/null 2>&1
 exit 0
 
+echo "Generating GO annotation file..."
 if ! gopca_extract_go_annotations.py -g "${GENE_FILE}" -t "{{gene_ontology_file}}" -a "{{go_association_file}}" \
         -e ${EVIDENCE_STR} -o "${ANNOTATION_FILE}" --min-genes-per-term {{go_min_genes}} --max-genes-per-term {{go_max_genes}}; then
+    echo "Failed!"
     touch FAILURE
     exit 0
 fi
