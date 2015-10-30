@@ -31,7 +31,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 setup(
     name='gopca-server',
 
-    version='0.1',
+    version='0.1rc',
 
     description=description,
     long_description=long_description,
