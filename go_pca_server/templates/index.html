@@ -36,10 +36,12 @@ Arguments
 
 <h3>New Run</h3>
 <form action="gopca" method="post">
-    <p>Description</p>
-    <input name="Description"/>
-    <p>Species</p>
-    <select name="species">
+    <label for="description">Description: </label><input type="text" name="Description" id="description" size=50/><br/>
+    <br/>
+    <label for="expression">Expression File (URL): </label><input type="text" size=100 maxlength=2000  id="expression" name="expression"/><br/>
+    <br/>
+    <label for="species">Species: </label>
+    <select name="species" id="species">
         {% for s in species %}
         <option value={{s}}>{{s}}</option>
         {% endfor %}
@@ -69,29 +71,29 @@ Arguments
             <legend>Select Evidence</legend>
             {# default: ['IDA','IGI','IMP','ISO','ISS','IC','NAS','TAS'] #}
             
-            <input type="checkbox" name="go_evidence" value="EXP"/>EXP - Inferred from Experiment<br/>
-            <input type="checkbox" name="go_evidence" value="IDA" checked="checked"/>IDA - Inferred from Direct Assay<br/>
-            <input type="checkbox" name="go_evidence" value="IPI"/>IPI - Inferred from Physical Interaction<br/>
-            <input type="checkbox" name="go_evidence" value="IMP" checked="checked"/>IMP - Inferred from Mutant Phenotype<br/>
-            <input type="checkbox" name="go_evidence" value="IGI" checked="checked"/>IGI - Inferred from Genetic Interaction<br/>
-            <input type="checkbox" name="go_evidence" value="IEP"/>IEP - Inferred from Expression Pattern<br/>
+            <input type="checkbox" name="go_evidence" value="EXP" id="EXP"/><label for="EXP">EXP - Inferred from Experiment</label><br/>
+            <input type="checkbox" name="go_evidence" value="IDA" id="IDA" checked="checked"/>IDA - Inferred from Direct Assay<br/>
+            <input type="checkbox" name="go_evidence" value="IPI" id="IPI"/>IPI - Inferred from Physical Interaction<br/>
+            <input type="checkbox" name="go_evidence" value="IMP" id="IMP" checked="checked"/>IMP - Inferred from Mutant Phenotype<br/>
+            <input type="checkbox" name="go_evidence" value="IGI" id="IGI" checked="checked"/>IGI - Inferred from Genetic Interaction<br/>
+            <input type="checkbox" name="go_evidence" value="IEP" id="IEP"/>IEP - Inferred from Expression Pattern<br/>
             <br/>
-            <input type="checkbox" name="go_evidence" value="ISS" checked="checked"/>ISS - Inferred from Sequence or Structural Similarity<br/>
-            <input type="checkbox" name="go_evidence" value="ISO" checked="checked"/>ISO - Inferred from Sequence Orthology<br/>
-            <input type="checkbox" name="go_evidence" value="ISA"/>ISA - Inferred from Sequence Alignment<br/>
-            <input type="checkbox" name="go_evidence" value="ISM"/>ISM - Inferred from Sequence Model<br/>
-            <input type="checkbox" name="go_evidence" value="IGC"/>IGC - Inferred from Genomic Context<br/>
-            <input type="checkbox" name="go_evidence" value="IBA"/>IBA - Inferred from Biological Aspect of Ancestor<br/>
-            <input type="checkbox" name="go_evidence" value="IBD"/>IBD - Inferred from Biological Aspect of Descendant<br/>
-            <input type="checkbox" name="go_evidence" value="IKR"/>IKR - Inferred from Key Residues<br/>
-            <input type="checkbox" name="go_evidence" value="IRD"/>IRD - Inferred from Rapid Divergence<br/>
-            <input type="checkbox" name="go_evidence" value="RCA"/>RCA - Inferred from Reviewed Computational Analysis<br/>
+            <input type="checkbox" name="go_evidence" value="ISS" id="ISS" checked="checked"/>ISS - Inferred from Sequence or Structural Similarity<br/>
+            <input type="checkbox" name="go_evidence" value="ISO" id="ISO" checked="checked"/>ISO - Inferred from Sequence Orthology<br/>
+            <input type="checkbox" name="go_evidence" value="ISA" id="ISA"/>ISA - Inferred from Sequence Alignment<br/>
+            <input type="checkbox" name="go_evidence" value="ISM" id="ISM"/>ISM - Inferred from Sequence Model<br/>
+            <input type="checkbox" name="go_evidence" value="IGC" id="IGC"/>IGC - Inferred from Genomic Context<br/>
+            <input type="checkbox" name="go_evidence" value="IBA" id="IBA"/>IBA - Inferred from Biological Aspect of Ancestor<br/>
+            <input type="checkbox" name="go_evidence" value="IBD" id="IBD"/>IBD - Inferred from Biological Aspect of Descendant<br/>
+            <input type="checkbox" name="go_evidence" value="IKR" id="IKR"/>IKR - Inferred from Key Residues<br/>
+            <input type="checkbox" name="go_evidence" value="IRD" id="IRD"/>IRD - Inferred from Rapid Divergence<br/>
+            <input type="checkbox" name="go_evidence" value="RCA" id="RCA"/>RCA - Inferred from Reviewed Computational Analysis<br/>
             <br/>
-            <input type="checkbox" name="go_evidence" value="NAS" checked="checked"/>NAS - Non-traceable Author Statement<br/>
-            <input type="checkbox" name="go_evidence" value="TAS" checked="checked"/>TAS - Traceable Author Statement<br/>
-            <input type="checkbox" name="go_evidence" value="IC" checked="checked"/>IC - Inferred by Curator<br/>
+            <input type="checkbox" name="go_evidence" value="NAS" id="NAS" checked="checked"/>NAS - Non-traceable Author Statement<br/>
+            <input type="checkbox" name="go_evidence" value="TAS" id="TAS" checked="checked"/>TAS - Traceable Author Statement<br/>
+            <input type="checkbox" name="go_evidence" value="IC" id="IC" checked="checked"/>IC - Inferred by Curator<br/>
             <br/>
-            <input type="checkbox" name="go_evidence" value="IEA"/>IEA - Inferred from Electronic Annotation<br/>
+            <input type="checkbox" name="go_evidence" value="IEA" id="IEA"/>IEA - Inferred from Electronic Annotation<br/>
         </fieldset>
         <br/>
     </fieldset>

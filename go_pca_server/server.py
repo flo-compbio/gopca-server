@@ -1,6 +1,8 @@
 #!/usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 
+# Copyright (c) 2015 Florian Wagner, Razvan Panea
+
 import sys
 import os
 import argparse
@@ -55,7 +57,9 @@ class GOPCAServer(object):
 
         # configure logger
         log_level = logging.INFO
-        if config['verbose']:
+        if config['quiet']:
+            log_level = logging.WARNING
+        elif config['verbose']:
             log_level = logging.DEBUG
 
         log_format = '[%(asctime)s] %(levelname)s: %(message)s'
@@ -151,18 +155,19 @@ class GOPCAServer(object):
     @staticmethod
     def get_argument_parser():
 
-        parser = argparse.ArgumentParser(description='GO-PCA web server')
+        parser = argparse.ArgumentParser(description='GO-PCA Web Server')
 
-        parser.add_argument('-k','--cookie-key',required=True,help='Secret cookie key')
-        parser.add_argument('-r','--run-dir',required=True,help='Directory for storing runs')
-        parser.add_argument('-d','--data-dir',required=True,help='Directory for storing annotation data')
+        parser.add_argument('-k','--cookie-key',required=True,help='Secret cookie key.')
+        parser.add_argument('-r','--run-dir',required=True,help='Directory for storing runs.')
+        parser.add_argument('-d','--data-dir',required=True,help='Directory for storing annotation data.')
         parser.add_argument('-p','--port',type=int,default=None,help='Port that the server listens on. If None, default to 80 (HTTP) or 443 (HTTPS).')
-        parser.add_argument('-q','--disk-quota',type=float,default=5000.0,help='Maximal disk space to use, in MB') # currently ignored
-        parser.add_argument('-f','--max-file-size',type=float,default=200.0,help='Maximal GO-PCA input size, in MB') # currently ignored
-        parser.add_argument('-s','--species',nargs='+',default=['Homo_sapiens','Mus_musculus'])
+        parser.add_argument('--disk-quota',type=float,default=5000.0,help='Maximal disk space to use, in MB.') # currently ignored
+        parser.add_argument('--max-file-size',type=float,default=200.0,help='Maximal GO-PCA input size, in MB.') # currently ignored
+        parser.add_argument('--species',nargs='+',default=['Homo_sapiens','Mus_musculus'])
         parser.add_argument('--ssl-dir',default=None,help='SSL certificate and private key directory. If not specified, disable SSL.')
-        parser.add_argument('-l','--log-file',default=None,help='Log file - if not specified, print to stdout')
-        parser.add_argument('-v','--verbose',action='store_true',help='Verbose output')
+        parser.add_argument('--log-file',default=None,help='Log file - if not specified, print to stdout.')
+        parser.add_argument('-v','--verbose',action='store_true',help='Verbose output. If --quiet is specified, this is parameter is ignored.')
+        parser.add_argument('-q','--quiet',action='store_true',help='Only output errors and warnings. Takes precedence over --verbose.')
 
         return parser
 
@@ -197,6 +202,7 @@ class GOPCAServer(object):
         config['species'] = sorted(args.species)
         config['log_file'] = os.path.abspath(args.log_file)
         config['verbose'] = args.verbose
+        config['quiet'] = args.quiet
         return config
 
     """

@@ -1,10 +1,10 @@
 # Copyright (c) 2015 Florian Wagner, Razvan Panea
 #
-# This file is part of GO-PCA Server.
+# This file is part of GO-PCA Web Server.
 #
-# GO-PCA Server is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License, Version 3,
-# as published by the Free Software Foundation.
+# GO-PCA Web Server is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License,
+# Version 3, as published by the Free Software Foundation.
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -22,7 +22,7 @@ from codecs import open
 from os import path
 
 here = path.abspath(path.dirname(__file__))
-description = 'GO-PCA Server: A tornado-based web server for GO-PCA'
+description = 'GO-PCA Web Server: A tornado-based web server for running GO-PCA'
 
 long_description = ''
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
