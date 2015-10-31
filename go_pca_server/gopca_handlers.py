@@ -22,12 +22,18 @@ class GOPCAHandler(TemplateHandler):
         return self.config['data_dir']
 
     @property
+    def max_file_size(self):
+        return self.config['max_file_size']
+
+    @property
     def species_names(self):
         return self.data['species_names']
 
     def validate_post_data(self):
         # make sure here that everything is kosher, otherwise give an error saying "invalid data" or something
         # e.g., evidence codes need to be checked
+
+        # make sure expression file URL has valid format
         return True
 
     def post(self):
@@ -63,6 +69,8 @@ class GOPCAHandler(TemplateHandler):
         species_name = self.species_names[species]
         gene_annotation_file = self.data_dir + os.sep + self.get_body_argument('gene_annotation') + '.gtf.gz'
 
+        expression_url = self.get_body_argument('expression')
+
         go_annotation = self.get_body_argument('go_annotation')
         gene_ontology_file = self.data_dir + os.sep + go_annotation + '.obo'
         go_association_file = self.data_dir + os.sep + go_annotation + '.gaf.gz'
@@ -76,10 +84,18 @@ class GOPCAHandler(TemplateHandler):
         #def esc(fn):
         #    return fn.replace(' ',r'\ ')
 
+        max_file_size = int(self.max_file_size * 1e6)
         template = self.get_template('gopca.sh')
-        script = template.render(species_name=species_name,gene_annotation_file=gene_annotation_file,
-                gene_ontology_file=gene_ontology_file,go_association_file=go_association_file,go_evidence=evidence,
-                go_min_genes=min_genes,go_max_genes=max_genes)
+        script = template.render(
+                species_name = species_name,
+                expression_url = expression_url,
+                max_file_size = max_file_size,
+                gene_annotation_file = gene_annotation_file,
+                gene_ontology_file = gene_ontology_file,
+                go_association_file = go_association_file,
+                go_evidence = evidence,
+                go_min_genes = min_genes,
+                go_max_genes = max_genes)
         output_file = run_dir + os.sep + 'gopca.sh'
         with open(output_file,'w') as ofh:
             ofh.write(script)

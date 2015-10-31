@@ -98,7 +98,8 @@ class GOPCAServer(object):
                 'template_env': self.template_env,\
                 'species': self.species,\
                 'species_names': self.species_names,\
-                'logger': self.logger}
+                'logger': self.logger,\
+                'max_file_size': self.max_file_size}
 
         self.app = tornado.web.Application([
             (r'/static/(.*)$', tornado.web.StaticFileHandler, {'path': self.static_dir}),
@@ -146,7 +147,7 @@ class GOPCAServer(object):
 
     @property
     def max_file_size(self):
-        return sef.config['max_file_size']
+        return self.config['max_file_size']
 
     @property
     def cookie_key(self):
