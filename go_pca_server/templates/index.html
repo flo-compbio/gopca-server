@@ -23,7 +23,7 @@ Arguments
         <th></th></tr>
     {% for r in runs %}
     <tr>
-        <td><a href="/runs/{{r.id}}">{{ r.id|truncate(10,True) }}</a></td> {{# see http://jinja.pocoo.org/docs/dev/templates/#truncate #}}
+        <td><a href="/runs/{{r.id}}">{{ r.id|truncate(10,True) }}</a></td> {# see http://jinja.pocoo.org/docs/dev/templates/#truncate #}
         <td>{{r.submit_time_html}}</td><td>{{r.description}}</td>
         <td>{{r.species}}</td>
         <td>{{r.status_html}}</td>
