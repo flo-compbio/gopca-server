@@ -55,7 +55,6 @@ Arguments
             {% endfor %}
         </select>
     </fieldset>
-    <br/>
     <fieldset>
         <legend>GO Annotations</legend>
         <select name="go_annotation">
@@ -64,8 +63,8 @@ Arguments
             {% endfor %}
         </select>
         <br/><br/>
-        <input type="text" size=10 name="go_min_genes" value="5"/>Min. number of genes per GO term<br/>
-        <input type="text" size=10 name="go_max_genes" value="200"/>Max. number of genes per GO term<br/>
+        <input type="text" size=10 name="go_min_genes" id="go_min_genes" value="5"/> <label for="go_min_genes">Min. number of genes per GO term</label><br/>
+        <input type="text" size=10 name="go_max_genes" id="go_max_geneS" value="200"/> <label for="go_max_genes">Max. number of genes per GO term</label><br/>
         <br/>
         <fieldset>
             <legend>Select Evidence</legend>
@@ -95,9 +94,18 @@ Arguments
             <br/>
             <input type="checkbox" name="go_evidence" value="IEA" id="IEA"/>IEA - Inferred from Electronic Annotation<br/>
         </fieldset>
-        <br/>
     </fieldset>
-    <br/>
+    <fieldset>
+        <legend>GO-PCA</legend>
+        <input type="text" size="5" name="D" id="D" value="0"><label for="D"> Number of PCs to test <i>D</i> (0 = determine automatically)</label><br/>
+        <input type="text" size="5" name="G" id="G" value="8000"><label for="G"> Number of most variable genes to analyze <i>G</i> (0 = off)</label><br/>
+        <input type="text" size="5" name="pval_thresh" id="pval_thresh" value="1e-6"><label for="pval_thresh"> P-value threshold</label><br/>
+        <input type="text" size="5" name="X_frac" id="X_frac" value="0.25"><label for="X_frac"> X<sub>frac</sub> (for XL-mHG)</label><br/>
+        <input type="text" size="5" name="X_min" id="X_min" value="5"><label for="X_min"> X<sub>min</sub> (for XL-mHG)</label><br/>
+        <input type="text" size="5" name="L" id="L" value="1000"><label for="L"> L (for XL-mHG)</label><br/>
+        <input type="text" size="5" name="psi" id="psi" value="1e-4"><label for="psi"> ψ (for E-score calculation)</label><br/>
+    </fieldset>
+
     <input type="submit" value="Submit Job"/>
 </form>
 
