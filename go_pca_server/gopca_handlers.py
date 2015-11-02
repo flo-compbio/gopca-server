@@ -8,6 +8,8 @@ from handlers import TemplateHandler
 from items import GSRun
 import util
 
+from gopca.go_pca_objects import GOPCAConfig
+
 class GOPCAHandler(TemplateHandler):
 
     def initialize(self,data):
@@ -32,12 +34,34 @@ class GOPCAHandler(TemplateHandler):
     def validate_post_data(self):
         # make sure here that everything is kosher, otherwise give an error saying "invalid data" or something
         # e.g., evidence codes need to be checked
+        # TO-DO!!!
 
         # make sure expression file URL has valid format
         return True
 
+    def get_gopca_config_from_post_data(self):
+        params = {}
+        params['sel_var_genes'] = int(self.get_body_argument('sel_var_genes'))
+        params['n_components'] = int(self.get_body_argument('n_components'))
+        params['seed'] = int(self.get_body_argument('pc_seed'))
+        params['pc_permutations'] = int(self.get_body_argument('pc_permutations'))
+        params['pc_zscore_thresh'] = float(self.get_body_argument('pc_zscore_thresh'))
+        params['pval_thresh'] = float(self.get_body_argument('pval_thresh'))
+        params['sig_corr_thresh'] = float(self.get_body_argument('sig_corr_thresh'))
+        params['mHG_X_frac'] = float(self.get_body_argument('mHG_X_frac'))
+        params['mHG_X_min'] = int(self.get_body_argument('mHG_X_min'))
+        params['mHG_L'] = int(self.get_body_argument('mHG_L'))
+        params['escore_pval_thresh'] = float(self.get_body_argument('psi'))
+        params['escore_thresh'] = float(self.get_body_argument('escore_thresh'))
+        params['disable_local_filter'] = (self.get_body_argument('disable_local',default=0) != 0)
+        params['disable_global_filter'] = (self.get_body_argument('disable_global',default=0) != 0)
+        params['go_part_of_cc_only'] = False
+        C = GOPCAConfig(self.logger,params)
+        return C
+
     def post(self):
 
+        # validate data first
         if not self.validate_post_data():
             return
 
@@ -50,6 +74,11 @@ class GOPCAHandler(TemplateHandler):
 
         self.set_secure_cookie('session_id',session_id)
         #self.write(session_id)
+
+        #self.logger.debug('Value of disable_local: %s', self.get_body_argument('disable_local',default=0))
+        #self.logger.debug('Value of disable_global: %s', self.get_body_argument('disable_global',default=0))
+
+        gopca_config = self.get_gopca_config_from_post_data()
 
         species = self.get_body_argument('species')
         description = self.get_body_argument('description',default='')
@@ -88,14 +117,20 @@ class GOPCAHandler(TemplateHandler):
         template = self.get_template('gopca.sh')
         script = template.render(
                 species_name = species_name,
+                # expression data
                 expression_url = expression_url,
                 max_file_size = max_file_size,
+                # Gene annotations
                 gene_annotation_file = gene_annotation_file,
+                # GO annotations
                 gene_ontology_file = gene_ontology_file,
                 go_association_file = go_association_file,
                 go_evidence = evidence,
                 go_min_genes = min_genes,
-                go_max_genes = max_genes)
+                go_max_genes = max_genes,
+                # GO-PCA
+                gopca_config = gopca_config
+                )
         output_file = run_dir + os.sep + 'gopca.sh'
         with open(output_file,'w') as ofh:
             ofh.write(script)

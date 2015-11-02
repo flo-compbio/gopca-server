@@ -56,7 +56,7 @@ Arguments
         </select>
     </fieldset>
     <fieldset>
-        <legend>GO Annotations</legend>
+        <legend>GO annotations</legend>
         <select name="go_annotation">
             {% for a in go_annotations %}
             <option value={{a.name}}>{{a.name}}</option>
@@ -97,13 +97,27 @@ Arguments
     </fieldset>
     <fieldset>
         <legend>GO-PCA</legend>
-        <input type="text" size="5" name="D" id="D" value="0"><label for="D"> Number of PCs to test <i>D</i> (0 = determine automatically)</label><br/>
-        <input type="text" size="5" name="G" id="G" value="8000"><label for="G"> Number of most variable genes to analyze <i>G</i> (0 = off)</label><br/>
-        <input type="text" size="5" name="pval_thresh" id="pval_thresh" value="1e-6"><label for="pval_thresh"> P-value threshold</label><br/>
-        <input type="text" size="5" name="X_frac" id="X_frac" value="0.25"><label for="X_frac"> X<sub>frac</sub> (for XL-mHG)</label><br/>
-        <input type="text" size="5" name="X_min" id="X_min" value="5"><label for="X_min"> X<sub>min</sub> (for XL-mHG)</label><br/>
-        <input type="text" size="5" name="L" id="L" value="1000"><label for="L"> L (for XL-mHG)</label><br/>
-        <input type="text" size="5" name="psi" id="psi" value="1e-4"><label for="psi"> ψ (for E-score calculation)</label><br/>
+        <input type="text" size="5" name="n_components" id="n_components" value="0">
+                <label for="n_components"> Number of PCs to test <i>D</i> (0 = determine automatically)</label><br/>
+        <input style="margin-left: 2em" type="text" size="15" name="pc_seed" id="pc_seed" value="123456789">
+                <label for="pc_seed"> Random number generator seed (if D=0)</label><br/>
+        <input style="margin-left: 2em" type="text" size="5" name="pc_permutations" id="pc_permutations" value="15">
+                <label for="pc_permutations"> Number of permutations (if D=0)</label><br/>
+        <input style="margin-left: 2em" type="text" size="5" name="pc_zscore_thresh" id="pc_zscore_thresh" value="2.0">
+                <label for="pc_zscore_thresh"> Z-score threshold (if D=0)</label><br/>
+        <input type="text" size="5" name="sel_var_genes" id="sel_var_genes" value="0">
+                <label for="sel_var_genes"> Select the <i>G</i> most variable genes (0 = off)</label><br/>
+        <input type="text" size="5" name="pval_thresh" id="pval_thresh" value="1e-6">
+                <label for="pval_thresh"> P-value threshold <i>P</i></label><br/>
+        <input type="text" size="5" name="escore_thresh" id="escore_thresh" value="2.0"><label for="escore_thresh"> E-score threshold <i>E</i></label><br/>
+        <input type="text" size="5" name="mHG_X_frac" id="mHG_X_frac" value="0.25"><label for="mHG_X_frac"> <i>X<sub>frac</sub></i> (for XL-mHG)</label><br/>
+        <input type="text" size="5" name="mHG_X_min" id="mHG_X_min" value="5"><label for="mHG_X_min"> <i>X<sub>min</sub></i> (for XL-mHG)</label><br/>
+        <input type="text" size="5" name="mHG_L" id="mHG_L" value="1000"><label for="mHG_L"> <i>L</i> (for XL-mHG)</label><br/>
+        <input type="text" size="5" name="psi" id="psi" value="1e-4"><label for="psi"> <i>ψ</i> (for E-score calculation)</label><br/>
+        <input type="checkbox" name="disable_local" value="1" id="disable_local"><label for="disable_local"> Disable "local" filter</label><br/>
+        <input type="checkbox" name="disable_global" value="1" id="disable_global"><label for="disable_global"> Disable "global" filter</label><br/>
+        <input type="text" size="5" name="sig_corr_thresh" id="sig_corr_thresh" value="0.5">
+                <label for="sig_corr_thresh"> Signature correlation threshold <i>R</i></label><br/>
     </fieldset>
 
     <input type="submit" value="Submit Job"/>
