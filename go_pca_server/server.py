@@ -23,11 +23,12 @@ from tornado import gen
 
 from tornado.httpclient import AsyncHTTPClient
 
-from items import GSRun,GSGeneAnnotation,GSGoAnnotation
-from handlers import *
-from update_handlers import *
-from gopca_handlers import *
-import util
+from go_pca_server.items import GSRun,GSGeneAnnotation,GSGoAnnotation
+from go_pca_server.handlers import *
+from go_pca_server.update_handlers import *
+from go_pca_server.gopca_handlers import *
+from go_pca_server.signature_handler import *
+from go_pca_server import util
 
 @tornado.web.asynchronous
 def future_func(callback):
@@ -107,7 +108,10 @@ class GOPCAServer(object):
             (r'/delete-run$', DeleteRunHandler,dict(data=data),'delete-run'),
             (r'/update-gene-annotations$', GeneAnnotationUpdateHandler,dict(data=data),'update-gene-annotations'),
             (r'/update-go-annotations$', GOAnnotationUpdateHandler,dict(data=data),'update-go-annotations'),
-            (r'/run/(.*)$', RunHandler,dict(data=data),'run'),
+            (r'/run/([0-9a-f]{32}/(?:gopca_pipeline_log\.txt|gopca_signature_matrix\.png|gopca_signatures\.tsv|gopca_signatures\.xlsx))$', \
+                    tornado.web.StaticFileHandler, {'path': self.run_dir}),
+            (r'/run/([0-9a-f]{32})$', RunHandler,dict(data=data),'run'),
+            (r'/run/([0-9a-f]{32})/signature/(-?[0-9]+)$', SignatureHandler,dict(data=data),'signature'),
             #(r'/sleep/(\d+)$', SleepHandler,{},'sleep'),
             (r'/(.*)$', MainHandler,dict(data=data),'main'),
         ], cookie_secret=self.cookie_key)

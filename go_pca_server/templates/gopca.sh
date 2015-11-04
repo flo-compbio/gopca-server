@@ -18,14 +18,20 @@ GENE_FILE="protein_coding_genes_{{species_name}}.tsv"
 ANNOTATION_FILE="go_annotations_{{species_name}}.tsv"
 EVIDENCE_STR="{% for e in go_evidence %} {{e}}{% endfor %}"
 EXPRESSION_FILE="expression.tsv"
+GOPCA_FILE="gopca_result.pickle"
+SIGNATURE_FILE="gopca_signatures.tsv"
+SIGNATURE_EXCEL_FILE="gopca_signatures.xlsx"
+SIGNATURE_MATRIX_FILE="gopca_signature_matrix.png"
+
+DPI=150
 
 echo "GO-PCA Run started!"
 
 pushd "${DIR}" > /dev/null 2>&1
 
-touch SUCCESS
-popd > /dev/null 2>&1
-exit 0
+#touch SUCCESS
+#popd > /dev/null 2>&1
+#exit 0
 
 #echo "Current working directory: `pwd`"
 
@@ -45,20 +51,44 @@ if ! (gunzip -c "{{gene_annotation_file}}" | extract_protein_coding_genes.py -a 
 fi
 
 echo "Generating GO annotation file..."
-if ! gopca_extract_go_annotations.py -g "${GENE_FILE}" -t "{{gene_ontology_file}}" -a "{{go_association_file}}" \
+if ! gopca_extract_go_annotations.py -g "${GENE_FILE}" -t "{{gene_ontology_file}}" -a "{{go_association_file}}" -l extract_go_annotations_log.txt \
         -e ${EVIDENCE_STR} -o "${ANNOTATION_FILE}" --min-genes-per-term {{go_min_genes}} --max-genes-per-term {{go_max_genes}}; then
     echo "Failed!"
     touch FAILURE
     exit 0
 fi
 
-go-pca.py \
-        -e "${EXPRESSION_FILE} -g "${GENE_FILE}" -a "${ANNOTATION_FILE}" -t "${{gene_ontology_file}}" \
+echo "Running GO-PCA..."
+if ! (go-pca.py \
+        -e "${EXPRESSION_FILE}" -a "${ANNOTATION_FILE}" -t "{{gene_ontology_file}}" \
         -G {{gopca_config.sel_var_genes}} -D {{gopca_config.n_components}} -P {{gopca_config.pval_thresh}} \
-        --escore_pval_thresh {{gopca_config.escore_pval_thresh}} -E {{gopca_config.escore_thresh}} \
+        --escore-pval-thresh {{gopca_config.escore_pval_thresh}} -E {{gopca_config.escore_thresh}} \
         --seed {{gopca_config.seed}} --pc-permutations {{gopca_config.pc_permutations}} --pc-zscore-thresh {{gopca_config.pc_zscore_thresh}} \
         -Xf {{gopca_config.mHG_X_frac}} -Xm {{gopca_config.mHG_X_min}} -L {{gopca_config.mHG_L}} \
-        -R {{gopca_config.sig_corr_thresh}} -l gopca_log.txt {% if gopca_config.disable_local_filter %} --disable-local-filter {% endif %} {% if gopca_config.disable_global_filter %} --disable-global-filter {% endif %}
+        -R {{gopca_config.sig_corr_thresh}} -l gopca_log.txt {% if gopca_config.disable_local_filter %} --disable-local-filter {% endif %} {% if gopca_config.disable_global_filter %} --disable-global-filter {% endif %} \
+        -o "${GOPCA_FILE}" > gopca_log.txt 2>&1); then
+    echo "Failed!"
+    touch FAILURE
+    exit 0
+fi
+
+echo "Extracting signatures (as *.tsv file)..."
+if ! (gopca_extract_signatures.py -g "${GOPCA_FILE}" -o "${SIGNATURE_FILE}"); then
+    echo "Failed!"
+    touch FAILURE
+fi
+
+echo "Extracting signatures (as *.xlsx file)..."
+if ! (gopca_extract_signatures_excel.py -g "${GOPCA_FILE}" -o "${SIGNATURE_EXCEL_FILE}"); then
+    echo "Failed!"
+    touch FAILURE
+fi
+
+echo "Plotting signature matrix..."
+if ! (gopca_plot_signature_matrix.py -g "${GOPCA_FILE}" -o "${SIGNATURE_MATRIX_FILE}" -r $DPI); then
+    echo "Failed!"
+    touch FAILURE
+fi
 
 touch SUCCESS
 

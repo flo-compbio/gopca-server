@@ -23,7 +23,7 @@ Arguments
         <th></th></tr>
     {% for r in runs %}
     <tr>
-        <td><a href="/runs/{{r.id}}">{{ r.id|truncate(10,True) }}</a></td> {# see http://jinja.pocoo.org/docs/dev/templates/#truncate #}
+        <td><a href="/run/{{r.id}}">{{ r.id|truncate(10,True) }}</a></td> {# see http://jinja.pocoo.org/docs/dev/templates/#truncate #}
         <td>{{r.submit_time_html}}</td><td>{{r.description}}</td>
         <td>{{r.species}}</td>
         <td>{{r.status_html}}</td>
@@ -36,7 +36,7 @@ Arguments
 
 <h3>New Run</h3>
 <form action="gopca" method="post">
-    <label for="description">Description: </label><input type="text" name="Description" id="description" size=50/><br/>
+    <label for="description">Description: </label><input type="text" name="description" id="description" size=50/><br/>
     <br/>
     <label for="expression">Expression File (URL): </label><input type="text" size=100 maxlength=2000  id="expression" name="expression" value="https://www.dropbox.com/s/vjfovywu2omobti/dmap_expression.tsv?dl=1"/><br/>
     <br/>

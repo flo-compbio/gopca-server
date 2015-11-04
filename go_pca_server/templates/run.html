@@ -1,6 +1,36 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>GO-PCA Run</h2>
-<p class="test">Run ID:</p><pre>{{run_id}}</pre>
 <p><a href="/?new=1">New Run</a></p>
+<h2>GO-PCA Run</h2>
+<p><a href="/run/{{run_id}}/gopca_pipeline_log.txt">Show log file</a></p>
+<form method="get" action="/run/{{run_id}}/gopca_signatures.tsv">
+    <button type="submit">Download signatures as text file</button>
+</form>
+<form method="get" action="/run/{{run_id}}/gopca_signatures.xlsx">
+    <button type="submit">Download signatures as Excel spreadsheet</button>
+</form>
+{# <p class="test">Run ID:</p><pre>{{run_id}}</pre> #}
+<h3>Signature Matrix</h3>
+<img style="width:80%" src="/run/{{run_id}}/gopca_signature_matrix.png"/>
+
+<h3>Signatures</h3>
+
+<table>
+    <tr>
+        <th>PC</th>
+        <th>Label</th>
+        <th>P-value</th>
+        <th>E-score</th>
+    </tr>
+    {% for sig in signatures %}
+    <tr>
+        <td>{{ sig.pc }}</td>
+        <td><a href="/run/{{run_id}}/signature/{{sig.__hash__()}}">{{ sig.label }}</a></td>
+        <td>{{ '%.1e' % sig.pval|float }}</td>
+        <td>{{ '%.1f' % sig.escore|float }}</td>
+        <td>{{ sig.__hash__() }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
 {% endblock %}

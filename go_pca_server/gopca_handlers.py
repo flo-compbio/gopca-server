@@ -4,13 +4,13 @@ import shutil
 import subprocess as subproc
 
 import tornado.web
-from handlers import TemplateHandler
+from handlers import GSHandler
 from items import GSRun
 import util
 
 from gopca.go_pca_objects import GOPCAConfig
 
-class GOPCAHandler(TemplateHandler):
+class GOPCAHandler(GSHandler):
 
     def initialize(self,data):
         super(GOPCAHandler,self).initialize(data)
@@ -139,7 +139,7 @@ class GOPCAHandler(TemplateHandler):
         # run the script
         st = os.stat(output_file)
         os.chmod(output_file, st.st_mode | stat.S_IXUSR)
-        log_file = run_dir + os.sep + 'gopca_log.txt'
+        log_file = run_dir + os.sep + 'gopca_pipeline_log.txt'
         cmd = '"%s" > "%s" 2>&1' %(output_file,log_file)
         self.logger.debug('Command: %s',cmd)
         subproc.Popen(cmd,shell=True,executable='/bin/bash')
@@ -155,7 +155,7 @@ class GOPCAHandler(TemplateHandler):
 
         self.runs[session_id] = r
 
-class DeleteRunHandler(TemplateHandler):
+class DeleteRunHandler(GSHandler):
 
     def initialize(self,data):
         super(DeleteRunHandler,self).initialize(data)

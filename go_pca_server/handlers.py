@@ -7,6 +7,7 @@ import hashlib
 import ftplib
 import re
 import urllib2
+import math
 from contextlib import closing
 import subprocess as subproc
 
@@ -15,10 +16,13 @@ import numpy as np
 
 import tornado
 
+from gopca import common
+
 #from tornado import gen
 #@tornado.gen.coroutine
 #def async_sleep(timeout):
 #   yield tornado.gen.Task(tornado.ioloop.IOLoop.instance().add_timeout, tornado.ioloop.IOLoop.instance().time() + timeout)
+sign = lambda x:int(math.copysign(1.0,x))
 
 class SleepHandler(tornado.web.RequestHandler):
 
@@ -29,7 +33,7 @@ class SleepHandler(tornado.web.RequestHandler):
         self.write("Awake! %s" % time.time())
         self.finish()
 
-class TemplateHandler(tornado.web.RequestHandler):
+class GSHandler(tornado.web.RequestHandler):
 
     def initialize(self,data):
         self.data = data
@@ -43,6 +47,19 @@ class TemplateHandler(tornado.web.RequestHandler):
     @property
     def logger(self):
         return self.data['logger']
+
+    # logging convenience functions
+    def debug(self,*args):
+        self.logger.debug(*args)
+
+    def info(self,*args):
+        self.logger.info(*args)
+
+    def warning(self,*args):
+        self.logger.warning(*args)
+
+    def error(self,*args):
+        self.logger.error(*args)
 
     @property
     def species(self):
@@ -64,7 +81,7 @@ class TemplateHandler(tornado.web.RequestHandler):
 
         return session_id
 
-class MainHandler(TemplateHandler):
+class MainHandler(GSHandler):
 
     def initialize(self,data):
         super(MainHandler,self).initialize(data)
@@ -126,16 +143,17 @@ class MainHandler(TemplateHandler):
                 runs=runs,species=self.species,gene_annotations=self.gene_annotations,go_annotations=self.go_annotations)
         self.write(html_output)
 
-class RunHandler(TemplateHandler):
+class RunHandler(GSHandler):
 
     def initialize(self,data):
         super(RunHandler,self).initialize(data)
+        self.run_dir = self.config['run_dir']
 
-    def get(self,path):
-        self.logger.debug('RunHandler path: %s',path)
-        if path in self.runs: # and re.match(HASH_PATTERN) # to ensure that user cannot submit crap
+    def get(self,run_id):
+        self.logger.debug('RunHandler ID: %s', run_id)
+        if run_id in self.runs: # and re.match(HASH_PATTERN) # to ensure that user cannot submit crap
 
-            run = self.runs[path]
+            run = self.runs[run_id]
 
             # check status
             if run.update_status():
@@ -143,11 +161,21 @@ class RunHandler(TemplateHandler):
 
             if run.is_running: # status: running
                 template = self.get_template('run_running.html')
-                html_output = template.render(timestamp=self.ts,title='Run',run_id=path,update_seconds=3)
+                html_output = template.render(timestamp=self.ts,title='Run',run_id=run_id,update_seconds=3)
 
-            else:
+            elif run.has_failed:
+                html_output = 'This run has failed'
+
+            elif run.has_succeeded:
                 template = self.get_template('run.html')
-                html_output = template.render(timestamp=self.ts,title='Run',run_id=path)
+                gopca_file = self.run_dir + os.sep + run_id + os.sep + 'gopca_result.pickle'
+                self.logger.debug('GO-PCA file: %s', gopca_file)
+                result = common.read_gopca_result(gopca_file)
+                signatures = result.signatures
+                signatures = sorted(signatures,key=lambda sig:[abs(sig.pc),-sign(sig.pc),-sig.escore])
+                #for 
+                
+                html_output = template.render(timestamp=self.ts,title='Run',run_id=run_id, signatures=signatures)
             self.write(html_output)
         else:
 

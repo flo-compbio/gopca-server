@@ -58,6 +58,20 @@ class GSRun(object):
         else:
             return False
 
+    @property
+    def has_failed(self):
+        if self.status == self.FAILED:
+            return True
+        else:
+            return False
+
+    @property
+    def has_succeeded(self):
+        if self.status == self.SUCCESSFUL:
+            return True
+        else:
+            return False
+
     def __eq__(self,other):
         if type(other) != type(self):
             return False
