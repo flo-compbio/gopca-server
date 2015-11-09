@@ -28,7 +28,6 @@
         <td><a href="/run/{{run_id}}/signature/{{sig.__hash__()}}">{{ sig.label }}</a></td>
         <td>{{ '%.1e' % sig.pval|float }}</td>
         <td>{{ '%.1f' % sig.escore|float }}</td>
-        <td>{{ sig.__hash__() }}</td>
     </tr>
     {% endfor %}
 </table>
