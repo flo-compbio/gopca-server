@@ -6,23 +6,22 @@ import gzip
 import subprocess as subproc
 import ftplib
 import urllib2
+import logging
 #import requests
 from contextlib import closing
 
 import numpy as np
 import tornado.web
 
-from items import GSGeneAnnotation,GSGoAnnotation
+from data import GeneAnnotationData, GOAnnotationData
 
 import util
+
+logger = logging.getLogger(__name__)
 
 class GeneAnnotationUpdateHandler(tornado.web.RequestHandler):
     def initialize(self,data):
         self.data = data
-
-    @property
-    def logger(self):
-        return self.data['logger']
 
     @property
     def species_names(self):
@@ -34,11 +33,11 @@ class GeneAnnotationUpdateHandler(tornado.web.RequestHandler):
 
     @property
     def species(self):
-        return self.config['species']
+        return self.config.species
 
     @property
     def data_dir(self):
-        return self.config['data_dir']
+        return self.config.data_dir
 
     def test_checksums(self,path,checksum):
         if not os.path.isfile(path): # not a file
@@ -47,7 +46,7 @@ class GeneAnnotationUpdateHandler(tornado.web.RequestHandler):
         # calculate checksum
         sub = subproc.Popen('sum %s' %(path),bufsize=-1,shell=True,stdout=subproc.PIPE)
         file_checksum = sub.communicate()[0].rstrip('\n')
-        self.logger.debug('TEST: %s %s', str(file_checksum), str(checksum))
+        logger.debug('TEST: %s %s', str(file_checksum), str(checksum))
         return file_checksum == checksum
 
     def post(self):
@@ -62,7 +61,7 @@ class GeneAnnotationUpdateHandler(tornado.web.RequestHandler):
 
         data = []
         #ftp.cwd(go_dir)
-        ftp.dir(go_dir,data.append)
+        ftp.dir(go_dir, data.append)
         #ftp.quit()
 
         # find everything that ends in release-xx
@@ -121,21 +120,21 @@ class GeneAnnotationUpdateHandler(tornado.web.RequestHandler):
             # compare checksums to see if we need to download the file
             output_file = self.data_dir + os.sep + gtf_file
             if self.test_checksums(output_file,checksums[gtf_file]):
-                self.logger.debug('Checksums agree!')
+                logger.debug('Checksums agree!')
             else:
-                self.logger.debug('Downloading %s...', output_file)
+                logger.debug('Downloading %s...', output_file)
                 gtf_path = '/'.join([spdir,gtf_file])
                 with open(output_file,'w') as ofh:
                     ftp.retrbinary('RETR %s' %(gtf_path),ofh.write)
 
-                self.logger.debug('done!')
+                logger.debug('done!')
                 if not self.test_checksums(output_file,checksums[gtf_file]):
-                    self.logger.debug('ERROR: Checksums don''t agree! Deleting downloaded file...')
+                    logger.debug('ERROR: Checksums don''t agree! Deleting downloaded file...')
                     if os.path.isfile(output_file): # race condition?
                         os.remove(output_file)
             
         # update gene annotations
-        self.data['gene_annotations'] = GSGeneAnnotation.find_gene_annotations(self.data_dir)
+        self.data['gene_annotations'] = GeneAnnotationData.find_gene_annotations(self.data_dir)
 
 class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
     def initialize(self,data):
@@ -146,20 +145,16 @@ class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
         return self.data['config']
 
     @property
-    def logger(self):
-        return self.data['logger']
-
-    @property
     def species_names(self):
         return self.data['species_names']
 
     @property
     def species(self):
-        return self.config['species']
+        return self.config.species
 
     @property
     def data_dir(self):
-        return self.config['data_dir']
+        return self.config.data_dir
 
     def test_checksums(self,path,checksum):
         if not os.path.isfile(path): # not a file
@@ -168,7 +163,7 @@ class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
         # calculate checksum
         sub = subproc.Popen('sum %s' %(path),bufsize=-1,shell=True,stdout=subproc.PIPE)
         file_checksum = sub.communicate()[0].rstrip('\n')
-        self.logger.debug('TEST: %s %s',str(file_checksum),str(checksum))
+        logger.debug('TEST: %s %s',str(file_checksum),str(checksum))
         return file_checksum == checksum
 
     def get_current_versions(self):
@@ -176,9 +171,9 @@ class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
         with closing(urllib2.urlopen('ftp://ftp.ebi.ac.uk/pub/databases/GO/goa/current_release_numbers.txt')) as uh:
             uh.readline()
             for l in uh:
-                self.logger.debug(l)
+                logger.debug(l)
                 fields = l.rstrip('\n').split('\t')
-                self.logger.debug(str(fields))
+                logger.debug(str(fields))
                 versions[fields[0]] = [fields[1],fields[2]]
         return versions
 
@@ -232,7 +227,7 @@ class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
 
             # get file size
             remote_size = ftp.size(remote_path)
-            self.logger.debug('Remote file size: %s', str(remote_size))
+            logger.debug('Remote file size: %s', str(remote_size))
 
             # check if we need to download the file by comparing it to the local file (if it exists)
             gaf_file = self.data_dir + os.sep + file_name
@@ -240,12 +235,12 @@ class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
                 continue # also skip downloading OBO file
 
             # download file
-            self.logger.debug('Downloading file "%s"...', url)
-            util.download_url(url,gaf_file)
+            logger.debug('Downloading file "%s"...', url)
+            util.download_url(url, gaf_file)
 
             # make sure download was successful
             if (not os.path.isfile(gaf_file)) or (os.path.getsize(gaf_file) != remote_size):
-                self.logger.debug('Download unsuccessful! Deleting file...')
+                logger.debug('Download unsuccessful! Deleting file...')
                 if os.path.isfile(gaf_file): # race condition?
                     os.remove(gaf_file)
 
@@ -255,6 +250,6 @@ class GOAnnotationUpdateHandler(tornado.web.RequestHandler):
             url = self.get_obo_url(version)
             obo_file = self.data_dir + os.sep + '%s_%s_%s.obo' %(spec,versions[name][0],versions[name][1])
             # download the obo file
-            util.download_url(url,obo_file)
+            util.download_url(url, obo_file)
 
-        self.data['go_annotations'] = GSGoAnnotation.find_go_annotations(self.data_dir)
+        self.data['go_annotations'] = GOAnnotationData.find_go_annotations(self.data_dir)
