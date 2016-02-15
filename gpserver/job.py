@@ -1,53 +1,56 @@
 import os
-from collections import Counter
-import json
 import codecs
-
+import json
 import datetime
-import dateutil
-import dateutil.parser
+import logging
 
-class GSRun(object):
+logger = logging.getLogger(__name__)
+
+class GSJob(object):
 
     RUNNING = 0
-    SUCCESSFUL = 1
+    FINISHED = 1
     FAILED = 2
 
     UTF8Writer = codecs.getwriter('utf8')
 
-    data_file_name = 'run_data.json'
+    data_file_name = 'job_data.json'
 
-    def __init__(self,id_,submit_time,run_dir,species,description,status=None):
+    def __init__(self, id_, dir_, desc, submit_time, species, status = None):
 
-        assert (submit_time.tzinfo is None) or isinstance(submit_time.tzinfo,dateutil.tz.tzutc) # we only support UTC time
+        assert isinstance(submit_time, datetime.datetime)
+        # we only support UTC time
+        assert (submit_time.tzinfo is None) or \
+                isinstance(submit_time.tzinfo, dateutil.tz.tzutc)
 
         self.id = id_
+        self.dir_ = run_dir_
         self.submit_time = submit_time
-        self.run_dir = run_dir
-        self.description = description
+        self.desc = desc
         self.species = species
         self.status = status
 
     def __repr__(self):
-        return '<GSRun - ID "%s">' %(self.id)
+        return '<GSJob - ID "%s">' %(self.id)
 
     def __str__(self):
         status = str(self.status)
         submit_time = self.get_json_datetime(self.submit_time)
-        return '<GSRun: ID=%s, submit time=%s, description=%s, species=%s, run_dir=%s, status=%s>' \
+        return '<GSJob: ID=%s, submit time=%s, description=%s, species=%s, run_dir=%s, status=%s>' \
                 %(self.id,self.submit_time,self.description,self.species,self.run_dir,self.status)
 
     @classmethod
-    def find_runs(cls,run_dir):
-        base = os.path.basename(run_dir)
-        runs = {}
-        for w in os.walk(run_dir):
+    def find_jobs(cls, job_dir):
+        base = os.path.basename(job_dir)
+        jobs = {}
+        for w in os.walk(job_dir):
             b = os.path.basename(w[0])
             if b != base:
-                data_file = run_dir + os.sep + b + os.sep + GSRun.data_file_name
-                runs[b] = cls.load_json(data_file)
-                runs[b].update_status()
-        return runs
+                data_file = job_dir + os.sep + b + os.sep + GSJob.data_file_name
+                jobs[b] = cls.load_json(data_file)
+                jobs[b].update_status()
+        logger.debug('Found %d jobs.', len(jobs))
+        return jobs
 
     #def __repr__(self):
 
@@ -66,8 +69,8 @@ class GSRun(object):
             return False
 
     @property
-    def has_succeeded(self):
-        if self.status == self.SUCCESSFUL:
+    def has_finished(self):
+        if self.status == self.FINISHED:
             return True
         else:
             return False
@@ -97,7 +100,7 @@ class GSRun(object):
     @staticmethod
     def parse_json_datetime(dt):
         # use parser from dateutil package to parse RFC 3339-compliant date
-        return dateutil.parser.parse(dt).replace(tzinfo=None)
+        return dateutil.parser.parse(dt).replace(tzinfo = None)
 
     @property
     def submit_time_json(self):
@@ -113,47 +116,48 @@ class GSRun(object):
             return 'Internal Server Error'
         elif self.status == self.RUNNING:
             return '<span style="color: orange; font-weight: bold">Running</span>'
-        elif self.status == self.SUCCESSFUL:
-            return '<span style="color: #007F00; font-weight: bold">Complete</span>'
+        elif self.status == self.FINISHED:
+            return '<span style="color: #007F00; font-weight: bold">Finished</span>'
         elif self.status == self.FAILED:
             return '<span style="color: #7F0000; font-weight: bold">Failed</span>'
         elif self.status is None:
             return 'Internal Server Error'
 
-    def save_json(self,output_file):
+    def write_json(self, output_file):
         json_submit_time = self.get_json_datetime(self.submit_time)
         data = {'id': self.id, 'submit_time': json_submit_time, 'run_dir': self.run_dir, 'species': self.species, 'description': self.description}
-        with open(output_file,'wb') as ofh:
-            writer = self.UTF8Writer(ofh)
-            json.dump(data,writer,ensure_ascii=False,encoding='utf8')
+        with codecs.open(output_file, 'wb', encoding = 'utf-8') as ofh:
+            #writer = self.UTF8Writer(ofh)
+            json.dump(data, ofh, ensure_ascii=False, encoding = 'utf8')
 
-    def store_data(self):
-        output_file = self.run_dir + os.sep + self.id + os.sep + self.data_file_name
-        self.save_json(output_file)
+    #def store_data(self):
+    #    output_file = self.run_dir + os.sep + self.id + os.sep + self.data_file_name
+    #    self.save_json(output_file)
 
     @classmethod
-    def load_json(cls,data_file):
+    def read_json(cls,data_file):
         data = None
-        with open(data_file,'rb') as fh:
-            data = json.load(fh,encoding='utf8')
+        with open(data_file, 'rb') as fh:
+            data = json.load(fh) # utf-8 by default
         submit_time = cls.parse_json_datetime(data['submit_time'])
         return cls(data['id'],submit_time,data['run_dir'],data['species'],data['description'])
 
     def update_status(self):
         """ returns True if status has changed """
-
-        old_status = self.status
+        # this function should be part of the server
 
         if (self.status is not None) and self.status > 0:
             # status is already final
             return False
-        
-        run_dir = self.run_dir + os.sep + self.id
+
+        old_status = self.status
+       
+        job_dir = self.run_dir + os.sep + self.id
 
         if os.path.isfile(run_dir + os.sep + 'FAILURE'):
             self.status = self.FAILED
-        elif os.path.isfile(run_dir + os.sep + 'SUCCESS'):
-            self.status = self.SUCCESSFUL
+        elif os.path.isfile(run_dir + os.sep + 'FINISHED'):
+            self.status = self.FINISHED
         else:
             self.status = self.RUNNING
 
@@ -161,55 +165,4 @@ class GSRun(object):
             return True
         else:
             return False
-        
-class GSGeneAnnotation(object):
-
-    def __init__(self,name):
-        self.name = name
-
-    @property
-    def file_name(self):
-        return self.name + '.gtf.gz'
-
-    @classmethod
-    def find_gene_annotations(cls,data_dir):
-        annotations = set()
-        for f in os.listdir(data_dir):
-            #print f
-            if os.path.isfile(data_dir + os.sep + f) and f.endswith('.gtf.gz'):
-                annotations.add(cls(f[:-7]))
-
-        annotations = sorted(annotations, key=lambda a:a.name)
-        return annotations
-
-class GSGoAnnotation(object):
-
-    def __init__(self,name):
-        self.name = name
-
-    @classmethod
-    def find_go_annotations(cls,data_dir):
-        annotations = set()
-        
-        C = Counter()
-        for f in os.listdir(data_dir):
-            if os.path.isfile(data_dir + os.sep + f):
-                if f.endswith('.gaf.gz'):
-                    C[f[:-7]] += 1
-                elif f.endswith('.obo'):
-                    C[f[:-4]] += 1
-
-        for f in C:
-            if C[f] == 2:
-                annotations.add(cls(f))
-
-        annotations = sorted(annotations,key=lambda a:a.name)
-        return annotations
-
-    @property
-    def ontology_file_name(self):
-        return self.name + 'obo'
-
-    @property
-    def association_file_name(self):
-        return self.name + '.gaf.gz'
+ 

@@ -1,8 +1,8 @@
-# Copyright (c) 2015 Florian Wagner, Razvan Panea
+# Copyright (c) 2015, 2016 Florian Wagner
 #
-# This file is part of GO-PCA Web Server.
+# This file is part of GO-PCA Server.
 #
-# GO-PCA Web Server is free software: you can redistribute it and/or
+# GO-PCA Server is free software: you can redistribute it and/or
 # modify it under the terms of the GNU General Public License,
 # Version 3, as published by the Free Software Foundation.
 #
@@ -22,7 +22,7 @@ from codecs import open
 from os import path
 
 here = path.abspath(path.dirname(__file__))
-description = 'GO-PCA Web Server: A tornado-based web server for running GO-PCA'
+description = 'GO-PCA Server: A tornado-based web server for running GO-PCA'
 
 long_description = ''
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
@@ -31,7 +31,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 setup(
     name='gopca-server',
 
-    version='0.1rc1',
+    version='0.1.0',
 
     description=description,
     long_description=long_description,
@@ -58,27 +58,27 @@ setup(
 
     keywords='server web application go-pca interface',
 
-    #packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
-    packages=['go_pca_server'],
+    packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
+    #packages=['gpserver'],
 
-	#libraries = [],
+    #libraries = [],
 
-    install_requires=['tornado','jinja2','python-dateutil','genometools'],
+    install_requires = ['tornado', 'jinja2', 'python-dateutil', 'genometools'],
     #'sphinx','sphinx-rtd-theme','sphinx-argparse','mock'],
 
-	# development dependencies
+    # development dependencies
     #extras_require={},
 
-	# data
-    package_data={'go_pca_server': ['templates/*.html','templates/*.sh','static/*.css']},
+    # data
+    package_data={'gpserver': ['templates/*.html','templates/*.sh','static/*.css']},
 
-	# data outside package
+    # data outside package
     #data_files=[],
 
-	# executable scripts
+    # executable scripts
     entry_points={
         'console_scripts': [
-			'go-pca-server.py = go_pca_server.server:main',
+            'go-pca-server.py = gpserver.main:main',
         ],
     },
 )

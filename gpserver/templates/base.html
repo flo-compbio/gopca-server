@@ -7,14 +7,17 @@ Arguments
     timestamp: time stamp, used to prevent caching of the CSS file
 
  #}
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
-    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<!DOCTYPE html>
+<html>
     <head>
+        <meta charset="UTF-8">
+        <title>{{title}} - GO-PCA Server</title>
+        <!--[if lt IE 9]>
+        <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js">
+        </script>
+        <![endif]-->
         <link rel="stylesheet" type="text/css" 
                 href="/static/mystyle.css?{{timestamp}}"/>
-        <title>{{title}} - GO-PCA Server</title>
     </head>
     <body>
         <div id="content">
@@ -29,4 +32,3 @@ Arguments
         </div>
     </body>
 </html>
-

@@ -2,7 +2,7 @@
 
 Arguments
 ---------
-    runs: list of GSRun objects, containing the currently available runs
+    jobs: list of GSJob objects, containing the currently available jobs
     gene_annotations: list of GSGeneAnnotation objects
     go_annotations: list of GSGOAnnotation objects
 
@@ -12,7 +12,7 @@ Arguments
 {% block content %}
 <h2>GO-PCA Server</h2>
 {# <p><a href="?new=1">New Session</a></p> #}
-<h3>Runs</h3>
+<h3>Jobs</h3>
 <table>
     <tr>
         <th>ID</th>
@@ -21,13 +21,18 @@ Arguments
         <th>Species</th>
         <th>Status</th>
         <th></th></tr>
-    {% for r in runs %}
+    {% for j in jobs %}
     <tr>
-        <td><a href="/run/{{r.id}}">{{ r.id|truncate(10,True) }}</a></td> {# see http://jinja.pocoo.org/docs/dev/templates/#truncate #}
-        <td>{{r.submit_time_html}}</td><td>{{r.description}}</td>
-        <td>{{r.species}}</td>
-        <td>{{r.status_html}}</td>
-        <td><form action="delete-run" method="post"><input type="hidden" name="run_id" value="{{r.id}}"/><input type="submit" value="delete"/></form></td>
+        <td><a href="/job/{{j.id}}">{{ r.id|truncate(10,True) }}</a></td> {# see http://jinja.pocoo.org/docs/dev/templates/#truncate #}
+        <td>{{j.submit_time_html}}</td><td>{{j.description}}</td>
+        <td>{{j.species}}</td>
+        <td>{{j.status_html}}</td>
+        <td>
+            <form action="delete-job" method="post">
+                <input type="hidden" name="run_id" value="{{j.id}}"/>
+                <input type="submit" value="delete"/>
+            </form>
+        </td>
     </tr>
     {#      <td>{{ds.description}}</td><td>{{ds.species}}</td></tr> #}
     {% endfor %}
@@ -70,7 +75,8 @@ Arguments
             <legend>Select Evidence</legend>
             {# default: ['IDA','IGI','IMP','ISO','ISS','IC','NAS','TAS'] #}
             
-            <input type="checkbox" name="go_evidence" value="EXP" id="EXP"/><label for="EXP">EXP - Inferred from Experiment</label><br/>
+            <input type="checkbox" name="go_evidence" value="EXP" id="EXP"/>
+            <label for="EXP">EXP - Inferred from Experiment</label><br/>
             <input type="checkbox" name="go_evidence" value="IDA" id="IDA" checked="checked"/>IDA - Inferred from Direct Assay<br/>
             <input type="checkbox" name="go_evidence" value="IPI" id="IPI"/>IPI - Inferred from Physical Interaction<br/>
             <input type="checkbox" name="go_evidence" value="IMP" id="IMP" checked="checked"/>IMP - Inferred from Mutant Phenotype<br/>
@@ -98,26 +104,35 @@ Arguments
     <fieldset>
         <legend>GO-PCA</legend>
         <input type="text" size="5" name="n_components" id="n_components" value="0">
-                <label for="n_components"> Number of PCs to test <i>D</i> (0 = determine automatically)</label><br/>
+        <label for="n_components"> Number of PCs to test <i>D</i> (0 = determine automatically)</label><br/>
         <input style="margin-left: 2em" type="text" size="15" name="pc_seed" id="pc_seed" value="123456789">
-                <label for="pc_seed"> Random number generator seed (if D=0)</label><br/>
+        <label for="pc_seed"> Random number generator seed (if D=0)</label><br/>
         <input style="margin-left: 2em" type="text" size="5" name="pc_permutations" id="pc_permutations" value="15">
-                <label for="pc_permutations"> Number of permutations (if D=0)</label><br/>
+        <label for="pc_permutations"> Number of permutations (if D=0)</label><br/>
         <input style="margin-left: 2em" type="text" size="5" name="pc_zscore_thresh" id="pc_zscore_thresh" value="2.0">
-                <label for="pc_zscore_thresh"> Z-score threshold (if D=0)</label><br/>
+        <label for="pc_zscore_thresh"> Z-score threshold (if D=0)</label><br/>
         <input type="text" size="5" name="sel_var_genes" id="sel_var_genes" value="0">
-                <label for="sel_var_genes"> Select the <i>G</i> most variable genes (0 = off)</label><br/>
+        <label for="sel_var_genes"> Select the <i>G</i> most variable genes (0 = off)</label><br/>
         <input type="text" size="5" name="pval_thresh" id="pval_thresh" value="1e-6">
-                <label for="pval_thresh"> P-value threshold <i>P</i></label><br/>
-        <input type="text" size="5" name="escore_thresh" id="escore_thresh" value="2.0"><label for="escore_thresh"> E-score threshold <i>E</i></label><br/>
-        <input type="text" size="5" name="mHG_X_frac" id="mHG_X_frac" value="0.25"><label for="mHG_X_frac"> <i>X<sub>frac</sub></i> (for XL-mHG)</label><br/>
-        <input type="text" size="5" name="mHG_X_min" id="mHG_X_min" value="5"><label for="mHG_X_min"> <i>X<sub>min</sub></i> (for XL-mHG)</label><br/>
-        <input type="text" size="5" name="mHG_L" id="mHG_L" value="1000"><label for="mHG_L"> <i>L</i> (for XL-mHG)</label><br/>
-        <input type="text" size="5" name="psi" id="psi" value="1e-4"><label for="psi"> <i>ψ</i> (for E-score calculation)</label><br/>
-        <input type="checkbox" name="disable_local" value="1" id="disable_local"><label for="disable_local"> Disable "local" filter</label><br/>
-        <input type="checkbox" name="disable_global" value="1" id="disable_global"><label for="disable_global"> Disable "global" filter</label><br/>
+        <label for="pval_thresh"> P-value threshold <i>P</i></label><br/>
+        <input type="text" size="5" name="escore_thresh" id="escore_thresh" value="2.0">
+        <label for="escore_thresh"> E-score threshold <i>E</i></label><br/>
+        <input type="text" size="5" name="mHG_X_frac" id="mHG_X_frac" value="0.25">
+        <label for="mHG_X_frac"> <i>X<sub>frac</sub></i> (for XL-mHG)</label><br/>
+        <input type="text" size="5" name="mHG_X_min" id="mHG_X_min" value="5">
+        <label for="mHG_X_min"> <i>X<sub>min</sub></i> (for XL-mHG)</label><br/>
+        <input type="text" size="5" name="mHG_L" id="mHG_L" value="1000">
+        <label for="mHG_L"> <i>L</i> (for XL-mHG)</label><br/>
+        <input type="text" size="5" name="psi" id="psi" value="1e-4">
+        <label for="psi"> <i>ψ</i> (for E-score calculation)</label><br/>
+        <input type="checkbox" name="disable_local" value="1" id="disable_local">
+        <label for="disable_local"> Disable "local" filter</label><br/>
+        <input type="checkbox" name="disable_global" value="1" id="disable_global">
+        <label for="disable_global"> Disable "global" filter</label><br/>
         <input type="text" size="5" name="sig_corr_thresh" id="sig_corr_thresh" value="0.5">
-                <label for="sig_corr_thresh"> Signature correlation threshold <i>R</i></label><br/>
+        <label for="sig_corr_thresh"> Signature correlation threshold <i>R</i></label><br/>
+        <input type="checkbox" name="go_part_of_cc_only" value="1" id="part_of_cc_only">
+        <label for="go_part_of_cc_only">Ignore "part of" GO term relations outside of CC domain</label><br/>
     </fieldset>
 
     <input type="submit" value="Submit Job"/>

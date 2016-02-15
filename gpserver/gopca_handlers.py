@@ -1,6 +1,8 @@
 import os
 import stat
 import shutil
+import logging
+import codecs
 import subprocess as subproc
 
 import tornado.web
@@ -8,28 +10,26 @@ from handlers import GSHandler
 from items import GSRun
 import util
 
-from gopca.go_pca_objects import GOPCAConfig
+from gopca import GOPCAConfig
+
+logger = logging.getLogger(__name__)
 
 class GOPCAHandler(GSHandler):
 
     def initialize(self,data):
-        super(GOPCAHandler,self).initialize(data)
+        super(GOPCAHandler, self).initialize(data)
 
-    @property
-    def run_dir(self):
-        return self.config['run_dir']
+    #@property
+    #def run_dir(self):
+    #    return self.config['run_dir']
 
-    @property
-    def data_dir(self):
-        return self.config['data_dir']
+    #@property
+    #def data_dir(self):
+    #    return self.config['data_dir']
 
-    @property
-    def max_file_size(self):
-        return self.config['max_file_size']
-
-    @property
-    def species_names(self):
-        return self.data['species_names']
+    #@property
+    #def max_file_size(self):
+    #    return self.config['max_file_size']
 
     def validate_post_data(self):
         # make sure here that everything is kosher, otherwise give an error saying "invalid data" or something
@@ -43,7 +43,7 @@ class GOPCAHandler(GSHandler):
         params = {}
         params['sel_var_genes'] = int(self.get_body_argument('sel_var_genes'))
         params['n_components'] = int(self.get_body_argument('n_components'))
-        params['seed'] = int(self.get_body_argument('pc_seed'))
+        params['pc_seed'] = int(self.get_body_argument('pc_seed'))
         params['pc_permutations'] = int(self.get_body_argument('pc_permutations'))
         params['pc_zscore_thresh'] = float(self.get_body_argument('pc_zscore_thresh'))
         params['pval_thresh'] = float(self.get_body_argument('pval_thresh'))
@@ -55,8 +55,9 @@ class GOPCAHandler(GSHandler):
         params['escore_thresh'] = float(self.get_body_argument('escore_thresh'))
         params['disable_local_filter'] = (self.get_body_argument('disable_local',default=0) != 0)
         params['disable_global_filter'] = (self.get_body_argument('disable_global',default=0) != 0)
-        params['go_part_of_cc_only'] = False
-        C = GOPCAConfig(self.logger,params)
+        params['go_part_of_cc_only'] = \
+                (self.get_body_argument('go_part_of_cc_only', default=0) != 0)
+        C = GOPCAConfig(params)
         return C
 
     def post(self):
@@ -65,26 +66,30 @@ class GOPCAHandler(GSHandler):
         if not self.validate_post_data():
             return
 
-        session_id = self.generate_session_id()
+        gopca_config = self.get_gopca_config_from_post_data()
+        #gopca_config.validate()
+        # write config to a ini file
 
-        if session_id in self.runs:
-            # very unlikely
-            # TO-DO: error! Run ID already exists.
-            return
+        # generate job ID
+        job_id = ''
+        while not job_id:
+            job_id = self.generate_session_id()
 
-        self.set_secure_cookie('session_id',session_id)
+            if job_id in self.jobs:
+                # very unlikely
+                job_id = ''
+
+        #self.set_secure_cookie('session_id',session_id)
         #self.write(session_id)
 
         #self.logger.debug('Value of disable_local: %s', self.get_body_argument('disable_local',default=0))
         #self.logger.debug('Value of disable_global: %s', self.get_body_argument('disable_global',default=0))
 
-        gopca_config = self.get_gopca_config_from_post_data()
-
         species = self.get_body_argument('species')
         description = self.get_body_argument('description',default='')
 
-        r = GSRun(session_id,GSRun.get_current_time(),self.run_dir,species,description)
-        self.logger.debug('Created run %s',str(r))
+        job = GSJob(session_id, GSJob.get_current_time(),self.run_dir,species,description)
+        self.logger.debug('Created job %s', str(job))
 
         # create the directory
         run_dir = self.run_dir + os.sep + session_id
@@ -131,8 +136,9 @@ class GOPCAHandler(GSHandler):
                 # GO-PCA
                 gopca_config = gopca_config
                 )
+        assert isinstance(script, unicode)
         output_file = run_dir + os.sep + 'gopca.sh'
-        with open(output_file,'w') as ofh:
+        with codecs.open(output_file, 'wb', encoding = 'utf-8') as ofh:
             ofh.write(script)
         self.logger.debug('Wrote file "%s".',output_file)
 
@@ -140,9 +146,9 @@ class GOPCAHandler(GSHandler):
         st = os.stat(output_file)
         os.chmod(output_file, st.st_mode | stat.S_IXUSR)
         log_file = run_dir + os.sep + 'gopca_pipeline_log.txt'
-        cmd = '"%s" > "%s" 2>&1' %(output_file,log_file)
-        self.logger.debug('Command: %s',cmd)
-        subproc.Popen(cmd,shell=True,executable='/bin/bash')
+        cmd = '"%s" > "%s" 2>&1' %(output_file, log_file)
+        logger.debug('Command: %s', cmd)
+        subproc.Popen(cmd, shell = True, executable = '/bin/bash')
 
         # update run status
         r.update_status()
@@ -155,36 +161,33 @@ class GOPCAHandler(GSHandler):
 
         self.runs[session_id] = r
 
-class DeleteRunHandler(GSHandler):
+class DeleteJobHandler(GSHandler):
 
-    def initialize(self,data):
-        super(DeleteRunHandler,self).initialize(data)
+    def initialize(self, data):
+        super(DeleteJobHandler, self).initialize(data)
 
     @property
-    def run_dir(self):
-        return self.config['run_dir']
+    def job_dir(self):
+        return self.config['job_dir']
 
     def post(self):
-        template = self.get_template('delete_run.html')
-        run_id = self.get_body_argument('run_id')
-        self.logger.debug('Delete-run run-id: %s', run_id)
-        self.logger.debug('Delete-run runs: %s', ', '.join(sorted(self.data['runs'].keys())))
+        template = self.get_template('delete_job.html')
+        job_id = self.get_body_argument('job_id')
+        logger.debug('Delete-job with ID "%s"', run_id)
+        logger.debug('Delete-job jobs: %s',
+                ', '.join(sorted(self.data['jobs'].keys())))
         try:
             # delete the run
-            del self.data['runs'][run_id]
+            del self.data['jobs'][job_id]
         except KeyError:
             pass
-            #self.data['runs'].remove(run_id)
         else:
             # the ID existed => it should be safe to remove the directory
-            run_dir = self.run_dir + os.sep + run_id
-            self.logger.debug('Deleting directory "%s".', run_dir)
-            shutil.rmtree(run_dir,ignore_errors=True)
+            dir_ = self.job_dir + os.sep + job_id
+            logger.debug('Deleting directory "%s".', dir_)
+            shutil.rmtree(dir_, ignore_errors = True)
             # also delete session cookie if it points to the deleted run
-            session_id = self.get_secure_cookie('session_id')
-            if session_id is not None and session_id == run_id:
-                self.clear_cookie('session_id')
-            self.logger.debug('Deleted run with ID "%s".', run_id)
+            logger.debug('Deleted run with ID "%s".', run_id)
         #html_output = template.render(timestamp=self.ts,title='Delete run - GOPCA Server',run_id=run_id)
         #self.write(html_output)
         #tornado.ioloop.IOLoop.instance().call_later(10,self.redirect,'/?new=1')

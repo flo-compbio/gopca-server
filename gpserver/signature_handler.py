@@ -19,7 +19,7 @@ from matplotlib import rc
 #from matplotlib import cm
 
 #from gopca.go_pca_objects import GOPCAConfig
-from gopca import common
+from gopca import util
 
 class SignatureHandler(GSHandler):
 
@@ -41,18 +41,18 @@ class SignatureHandler(GSHandler):
         # get signature gene expression matrix and cluster rows
         sig_genes = sig.genes
         E = sig.E
-        order_rows = common.cluster_rows(E,metric='correlation',method='average')
+        order_rows = util.cluster_rows(E, metric = 'correlation', method = 'average')
         sig_genes = [sig_genes[i] for i in order_rows]
         E = E[order_rows,:]
 
         # standardize gene expression matrix
-        E_std = common.get_standardized_matrix(E)
+        E_std = util.get_standardized_matrix(E)
         # calculate signature label and expression
         sig_label = sig.get_label(include_id=True)
         sig_expr = np.mean(E_std,axis=0)
 
         # get sample order from signature matrix
-        order_cols = common.cluster_samples(S)
+        order_cols = util.cluster_samples(S)
         sig_expr = sig_expr[order_cols]
         E_std = E_std[:,order_cols]
 
@@ -88,7 +88,7 @@ class SignatureHandler(GSHandler):
 
         memdata = io.BytesIO()
 
-        plt.savefig(memdata,format='png',bbox_inches='tight')
+        plt.savefig(memdata, format = 'png', bbox_inches = 'tight')
         image = memdata.getvalue()
 
         return image
@@ -97,15 +97,15 @@ class SignatureHandler(GSHandler):
     def get(self,run_id,signature_id):
         gopca_file = self.run_dir + os.sep + run_id + os.sep + 'gopca_result.pickle'
         self.debug('GOA-PCA file: %s', gopca_file)
-        gopca_result = common.read_gopca_result(gopca_file)
-        sig = self.get_signature_by_hash(gopca_result.signatures,int(signature_id))
+        G = util.read_gopca_result(gopca_file)
+        sig = self.get_signature_by_hash(G.signatures, int(signature_id))
 
         if sig is None:
             raise tornado.web.HTTPError(404)
 
         self.debug('Signature: %s', str(sig))
 
-        image = self.get_signature_plot(gopca_result.S,sig)
+        image = self.get_signature_plot(G.S, sig)
         self.set_header('Content-type', 'image/png')
         self.set_header('Content-length', len(image))
         self.write(image)

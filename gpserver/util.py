@@ -1,12 +1,30 @@
 # -*- coding: utf-8 -*-
 
+import sys
 import os
 import errno
 import urllib2
+import logging
 from contextlib import closing
 from collections import Counter
 
+from genometools import misc
+
 from items import *
+
+def get_logger(name = '', log_stream = sys.stdout, log_file = None,
+    quiet = False, verbose = False):
+
+    # configure root logger
+    log_level = logging.INFO
+    if quiet:
+        log_level = logging.WARNING
+    elif verbose:
+        log_level = logging.DEBUG
+
+    new_logger = misc.configure_logger(name, log_stream, log_file, log_level)
+
+    return new_logger
 
 def download_url(url,output_file):
     with closing(urllib2.urlopen(url)) as uh, open(output_file,'wb') as ofh:
